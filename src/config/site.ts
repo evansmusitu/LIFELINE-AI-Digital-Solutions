@@ -13,6 +13,7 @@ export const SITE = {
   whatsappDisplay: '+263 781 572 008',
   whatsappChannelUrl: 'https://whatsapp.com/channel/0029VbES1BzFMqrPyrFUJt2T',
   email: 'support@mftintelligence.com',
+  founder: { name: 'Evans Musitu', initials: 'EM', role: 'Founder and Lead Developer' },
   /** The earlier 16-demo studio. Linked as "more demos" until all 25 demos are live here; then remove the links. */
   earlierStudioUrl: 'https://lifeline-digital-demo-studio-llx092.v2.appdeploy.ai/',
   base: 'Based in Zimbabwe. Working with businesses worldwide.',

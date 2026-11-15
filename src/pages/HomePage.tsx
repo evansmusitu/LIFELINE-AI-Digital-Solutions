@@ -269,39 +269,109 @@ function DemoCard({ demo }: { demo: DemoMeta }) {
 }
 
 /*
- * About section. Only facts LIFELINE has confirmed: the team name, where it is based and the
- * services from the brief (section 4). No testimonials, client names or figures (brief, section 5).
+ * About section, from LIFELINE's own "Meet LIFELINE" text (15 November 2026), shortened for the page.
+ * Only facts LIFELINE has given: no testimonials, client names or figures (brief, section 5).
  */
 
+const PRINCIPLES = [
+  [
+    'Try it before you invest.',
+    'Working demos and prototypes show what your solution could look like before you commit to a bigger project.',
+  ],
+  [
+    'Your problem comes first.',
+    'Not every problem needs AI. Sometimes a clear website, an FAQ assistant or a simple automation is the better fix.',
+  ],
+  [
+    'Scope and price agreed up front.',
+    'Deliverables, milestones, revisions, price and any outside service costs are agreed before work starts.',
+  ],
+  [
+    'Honest about what’s real.',
+    'We tell you what’s a demo, what’s working, and what needs extra integrations, hosting or testing.',
+  ],
+  [
+    'You stay in control.',
+    'We show you how to use and maintain what we build, and hand over the agreed source files and documentation.',
+  ],
+] as const
+
 function About() {
+  const { founder } = SITE
   return (
     <section id="about" aria-labelledby="about-title" className="scroll-mt-16 border-t border-white/5 bg-ink-900">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:px-8 lg:py-20">
-        <div>
-          <p className="text-sm font-semibold tracking-[0.18em] text-brand-cyan uppercase">About us</p>
-          <h2
-            id="about-title"
-            tabIndex={-1}
-            className="heading-glow mt-2 font-display text-3xl font-bold text-white outline-none sm:text-4xl"
-          >
-            We’re the LIFELINE team
-          </h2>
-          <p className="mt-4 text-mist-200 sm:text-lg">
-            {SITE.brand} is run by the LIFELINE team. We’re based in Zimbabwe and work with businesses worldwide.
-          </p>
-          <p className="mt-4 text-mist-200 sm:text-lg">
-            We design, build and look after the technology a business runs on: its website, AI assistants, automations
-            and custom software. Our approach is in our tagline:{' '}
-            <span className="font-semibold text-white">{SITE.tagline}</span>
-          </p>
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
+          <div>
+            <p className="text-sm font-semibold tracking-[0.18em] text-brand-cyan uppercase">About LIFELINE</p>
+            <h2
+              id="about-title"
+              tabIndex={-1}
+              className="heading-glow mt-2 font-display text-3xl font-bold text-white outline-none sm:text-4xl"
+            >
+              Technology that solves real problems
+            </h2>
+            <p className="mt-4 text-mist-200 sm:text-lg">
+              {SITE.brand} is led by its founder, {founder.name}, a technology entrepreneur and developer based in
+              Zimbabwe. We make professional websites, automation and practical business technology accessible to
+              entrepreneurs, growing companies and organizations, in Zimbabwe and worldwide.
+            </p>
+            <p className="mt-4 text-mist-200 sm:text-lg">
+              Our view is simple: technology should do more than look impressive. It should solve a real problem,
+              improve your customers’ experience and make your business easier to run.
+            </p>
+
+            <div className="mt-8 flex gap-4 rounded-2xl border border-white/10 bg-ink-950 p-5">
+              <span
+                aria-hidden="true"
+                className="grid size-14 shrink-0 place-items-center rounded-full bg-brand-gradient font-display text-lg font-bold text-ink-950"
+              >
+                {founder.initials}
+              </span>
+              <div>
+                <p className="font-display font-semibold text-white">{founder.name}</p>
+                <p className="text-sm font-medium text-brand-cyan">{founder.role}</p>
+                <p className="mt-2 text-sm text-mist-300">
+                  Oversees planning, development, technical decisions and client communication.
+                </p>
+              </div>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-mist-400">
+              {founder.name} also leads MUSITU Intelligence, which builds AI research and financial intelligence tools.
+              That’s why our email address ends in mftintelligence.com.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-display text-lg font-semibold text-white">How we work</h3>
+            <ul className="mt-4 space-y-4">
+              {PRINCIPLES.map(([title, detail]) => (
+                <li key={title} className="flex gap-3">
+                  <Check className="mt-1 size-4 shrink-0 text-brand-cyan" aria-hidden="true" />
+                  <p className="text-mist-200">
+                    <span className="font-semibold text-white">{title}</span> {detail}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-6 text-sm text-mist-300">
+              Every demo on this site uses sample data. We’ll add client projects here as clients give us permission to
+              show them.
+            </p>
+            <div className="mt-6">
+              <WhatsAppButton size="lg" message={GENERAL_ENQUIRY} label="Discuss your project" />
+            </div>
+          </div>
         </div>
 
-        <div>
-          <h3 className="font-display text-lg font-semibold text-white">What we do</h3>
-          <ul className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+        <div className="mt-14 border-t border-white/10 pt-8">
+          <h3 className="font-display text-lg font-semibold text-white">What we build</h3>
+          <ul className="mt-4 flex flex-wrap gap-2">
             {SERVICES.map((service) => (
-              <li key={service} className="flex gap-2.5 text-mist-200">
-                <Check className="mt-1 size-4 shrink-0 text-brand-cyan" aria-hidden="true" />
+              <li
+                key={service}
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-mist-200"
+              >
                 {service}
               </li>
             ))}
