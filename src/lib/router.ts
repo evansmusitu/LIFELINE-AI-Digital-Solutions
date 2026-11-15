@@ -3,14 +3,16 @@ import { useSyncExternalStore } from 'react'
 /*
  * A small History API router with clean URLs:
  *   /                  studio home
- *   /#demos, /#contact home page sections
+ *   /#demos, /#about, /#contact  home page sections
  *   /demos/<slug>      a demo
  * The build writes one HTML file per demo (see vite.config.ts), so each demo link has its
  * own title and description in WhatsApp link previews and search results. Cloudflare
  * serves dist/demos/<slug>.html at /demos/<slug>, and unknown paths fall back to the studio.
  */
 
-export type HomeSection = 'demos' | 'contact'
+export type HomeSection = 'demos' | 'about' | 'contact'
+
+const SECTIONS: readonly HomeSection[] = ['demos', 'about', 'contact']
 
 export type Route =
   | { name: 'home'; section?: HomeSection }
@@ -29,6 +31,7 @@ export interface RouterLocation {
 export const paths = {
   home: '/',
   demos: '/#demos',
+  about: '/#about',
   contact: '/#contact',
   demo: (slug: string) => `/demos/${slug}`,
 }
@@ -59,7 +62,7 @@ export function useLocation(): RouterLocation {
 }
 
 function isSectionHash(hash: string): boolean {
-  return hash === '#demos' || hash === '#contact'
+  return SECTIONS.some((section) => hash === `#${section}`)
 }
 
 export function parseRoute({ path, hash }: Pick<RouterLocation, 'path' | 'hash'>): Route {
@@ -93,7 +96,7 @@ function redirectLegacyHash() {
   const legacy = window.location.hash.match(/^#\/(.*)$/)
   if (!legacy) return
   const path = legacy[1].replace(/\/+$/, '')
-  const target = path === 'demos' || path === 'contact' ? `/#${path}` : `/${path}`
+  const target = isSectionHash(`#${path}`) ? `/#${path}` : `/${path}`
   window.history.replaceState(null, '', target)
   current = { path: window.location.pathname, hash: window.location.hash, key: current.key }
 }

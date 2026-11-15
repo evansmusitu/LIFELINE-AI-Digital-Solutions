@@ -16,6 +16,7 @@ export function HomePage() {
     <>
       <Hero />
       <Gallery />
+      <About />
       <Contact />
       <MobileCtaBar>
         <LinkButton href={paths.contact} variant="secondary" className="shrink-0 px-4!">
@@ -264,6 +265,50 @@ function DemoCard({ demo }: { demo: DemoMeta }) {
         />
       </div>
     </li>
+  )
+}
+
+/*
+ * About section. Only facts LIFELINE has confirmed: the team name, where it is based and the
+ * services from the brief (section 4). No testimonials, client names or figures (brief, section 5).
+ */
+
+function About() {
+  return (
+    <section id="about" aria-labelledby="about-title" className="scroll-mt-16 border-t border-white/5 bg-ink-900">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 lg:px-8 lg:py-20">
+        <div>
+          <p className="text-sm font-semibold tracking-[0.18em] text-brand-cyan uppercase">About us</p>
+          <h2
+            id="about-title"
+            tabIndex={-1}
+            className="heading-glow mt-2 font-display text-3xl font-bold text-white outline-none sm:text-4xl"
+          >
+            We’re the LIFELINE team
+          </h2>
+          <p className="mt-4 text-mist-200 sm:text-lg">
+            {SITE.brand} is run by the LIFELINE team. We’re based in Zimbabwe and work with businesses worldwide.
+          </p>
+          <p className="mt-4 text-mist-200 sm:text-lg">
+            We design, build and look after the technology a business runs on: its website, AI assistants, automations
+            and custom software. Our approach is in our tagline:{' '}
+            <span className="font-semibold text-white">{SITE.tagline}</span>
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-display text-lg font-semibold text-white">What we do</h3>
+          <ul className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+            {SERVICES.map((service) => (
+              <li key={service} className="flex gap-2.5 text-mist-200">
+                <Check className="mt-1 size-4 shrink-0 text-brand-cyan" aria-hidden="true" />
+                {service}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
   )
 }
 
