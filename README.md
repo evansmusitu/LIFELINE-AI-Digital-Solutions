@@ -43,10 +43,19 @@ as `#/demos/inventory-pos`, and asset paths are relative, so no server rewrites 
 
 ## Logo
 
-Add the real logo as `public/logo.png` (a transparent PNG or SVG works best). The large badge on the home page picks
-it up automatically. Until then, an SVG "L" placeholder in brand colours is shown. At small sizes (header, footer,
-favicon) the site always uses the "L" mark with the name in live text, because the thin "AI CONCIERGE" lettering
-in the logo is unreadable below about 120 px.
+`public/logo.png` is the master logo (768 px). The pages use smaller copies made from it:
+
+| File | Size | Used for |
+|---|---|---|
+| `src/assets/logo-badge.jpg` | 480 px, 34 KB | Full badge on the home page |
+| `src/assets/logo-mark.png` | 128 px, 15 KB | The "L" icon alone on a navy disc: header, footer, "Powered by" bars, browser tab icon |
+| `public/og-image.jpg` | 1200 × 630, 90 KB | Link preview on WhatsApp, Facebook, LinkedIn and X |
+
+At small sizes the site uses only the "L" icon, with the name in live text, because the thin "AI CONCIERGE"
+lettering is unreadable below about 120 px. If the logo changes, regenerate all three copies.
+
+The link-preview tags in `index.html` use absolute URLs on `https://lifeline-demo-studio.freelancer-d62.workers.dev/`.
+Update them if the site moves to another address.
 
 ## Where things live
 
