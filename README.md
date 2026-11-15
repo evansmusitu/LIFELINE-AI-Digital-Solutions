@@ -24,7 +24,7 @@ and the hosting settings are in `wrangler.jsonc`.
 
 | Setting | Value |
 |---|---|
-| Worker name | `lifeline-demo-studio`. It must match `name` in `wrangler.jsonc`, or builds fail. |
+| Worker name | `lifeline-ai-digital-solutions`. It must match `name` in `wrangler.jsonc`, or builds fail. |
 | Production branch | `main` |
 | Build command | `npm run build` |
 | Deploy command | `npx wrangler deploy` |
