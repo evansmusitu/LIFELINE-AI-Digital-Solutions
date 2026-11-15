@@ -3,7 +3,9 @@
 	// Must match the Worker name in the Cloudflare dashboard, or Workers Builds fails.
 	"name": "lifeline-demo-studio",
 	"compatibility_date": "2026-11-15",
-	// Gives each pull request Preview its own workers.dev link.
+	// Serve production on lifeline-demo-studio.<subdomain>.workers.dev, and give each
+	// pull request Preview its own workers.dev link.
+	"workers_dev": true,
 	"preview_urls": true,
 	// Static site only: Cloudflare serves the Vite build output. There is no Worker script.
 	"assets": {
