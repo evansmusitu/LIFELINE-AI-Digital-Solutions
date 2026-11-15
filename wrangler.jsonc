@@ -1,0 +1,20 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	// Must match the Worker name in the Cloudflare dashboard, or Workers Builds fails.
+	"name": "lifeline-demo-studio",
+	"compatibility_date": "2026-11-15",
+	// Serve production on lifeline-demo-studio.<subdomain>.workers.dev, and give each
+	// pull request Preview its own workers.dev link.
+	"workers_dev": true,
+	"preview_urls": true,
+	// Static site only: Cloudflare serves the Vite build output. There is no Worker script.
+	"assets": {
+		"directory": "./dist",
+		// /demos/<slug> serves dist/demos/<slug>.html (the default "auto-trailing-slash" HTML
+		// handling). Unknown paths load the studio, which shows its "page not found" screen.
+		"not_found_handling": "single-page-application"
+	},
+	// Required by Worker Previews (pull request preview links). The static site needs no
+	// preview-only settings.
+	"previews": {}
+}

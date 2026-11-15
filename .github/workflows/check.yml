@@ -1,0 +1,36 @@
+# Runs on every pull request and every merge into main: a clean install, the code-quality
+# check (oxlint) and the production build, which includes the TypeScript type check.
+# Cloudflare Workers Builds deploys the site separately. This check only reports pass or fail.
+name: Check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A new push to the same pull request cancels the run that is still going.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
