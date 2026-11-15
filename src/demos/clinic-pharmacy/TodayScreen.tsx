@@ -73,7 +73,7 @@ export function TodayScreen({ appointments, patients, medicines, now, onCheckIn,
               Book appointment
             </AppButton>
           }
-          bodyClassName="p-0"
+          bodyClassName="p-0!"
         >
           <div className="border-b border-slate-100 px-4 pt-3">
             <Segmented

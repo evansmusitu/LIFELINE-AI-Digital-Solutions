@@ -84,7 +84,7 @@ export function RemindersScreen({ reminders, patients, medicines, templates, onS
                     </AppButton>
                   )
                 }
-                bodyClassName="p-0"
+                bodyClassName="p-0!"
               >
                 <ul className="divide-y divide-slate-100">
                   {list.map((r) => {

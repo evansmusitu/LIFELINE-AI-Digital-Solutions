@@ -84,6 +84,7 @@ export function Panel({
   description?: ReactNode
   action?: ReactNode
   className?: string
+  /** Added after the default `p-4`. To change the padding, use `!`, e.g. `p-0!`: Tailwind sorts `.p-0` before `.p-4`. */
   bodyClassName?: string
   children: ReactNode
 }) {
