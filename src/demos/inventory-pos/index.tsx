@@ -33,6 +33,11 @@ export default function InventoryPosDemo() {
   const { products, sales, orders } = state
 
   const completeSale = (lines: SaleLine[], discountRate: number, payment: Payment, tendered?: number) => {
+    const short = lines.find((l) => l.qty > (products.find((p) => p.sku === l.sku)?.onHand ?? 0))
+    if (short) {
+      toast(`Not enough ${short.name} in stock for this sale.`, 'warning')
+      return
+    }
     const totals = priceSale(lines, discountRate)
     const sale: Sale = {
       id: uid('sale'),

@@ -15,6 +15,18 @@ export function daysAgoAt(days: number, hours: number, minutes = 0): number {
   return todayAt(hours, minutes) - days * DAY
 }
 
+/** Timestamp for tomorrow at the given local time. Uses the calendar, so clock changes don't shift it. */
+export function tomorrowAt(hours: number, minutes = 0): number {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  d.setHours(hours, minutes, 0, 0)
+  return d.getTime()
+}
+
+export function isSameDay(a: number, b: number): boolean {
+  return new Date(a).toDateString() === new Date(b).toDateString()
+}
+
 /**
  * Each demo runs on its own clock that starts at a fixed time of day (for example 10:40),
  * so the sample day looks the same whenever someone visits. The clock then moves in real time.

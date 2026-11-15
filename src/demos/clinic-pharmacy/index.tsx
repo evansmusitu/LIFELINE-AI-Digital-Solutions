@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useToast } from '../../components/toast-context'
 import { clockTime, duration, num } from '../../lib/format'
 import { usePersistentState } from '../../lib/storage'
-import { DAY, todayAt, uid, useDemoClock, useTicker } from '../../lib/time'
+import { DAY, isSameDay, todayAt, tomorrowAt, uid, useDemoClock, useTicker } from '../../lib/time'
 import { useDemoMetrics } from '../metrics'
 import { DemoAppShell, type DemoScreen } from '../shell'
 import { CLINICIANS, createInitialState, medicineFlags, stockOf, takeStock } from './data'
@@ -28,7 +28,7 @@ export default function ClinicPharmacyDemo() {
   const clock = useDemoClock(10, 40)
   const now = useTicker(clock, 15_000)
   const toast = useToast()
-  const [state, setState] = usePersistentState<ClinicState>(`${SLUG}.state`, createInitialState, { version: 1, freshDaily: true })
+  const [state, setState] = usePersistentState<ClinicState>(`${SLUG}.state`, createInitialState, { version: 2, freshDaily: true })
   const [screen, setScreen] = useState<ScreenId>('today')
   const timers = useRef<number[]>([])
 
@@ -113,34 +113,38 @@ export default function ClinicPharmacyDemo() {
     if (!patientId) return
     const [h, m] = input.time.split(':').map(Number)
     const doctor = CLINICIANS.find((c) => c.id === input.clinicianId)
-    setState((s) => {
-      const next = { ...s, patients: newPatient ? [...s.patients, newPatient] : s.patients }
-      if (input.day === 'today') {
-        const appt: Appointment = {
-          id: uid('a'),
-          patientId: patientId!,
-          clinicianId: input.clinicianId,
-          serviceId: input.serviceId,
-          start: todayAt(h, m),
-          status: input.confirm ? 'Confirmed' : 'Booked',
-        }
-        return { ...next, appointments: [...next.appointments, appt] }
-      }
-      const reminder: Reminder = {
-        id: uid('rem'),
-        kind: 'day-before',
-        patientId: patientId!,
-        clinicianId: input.clinicianId,
-        when: `tomorrow at ${input.time}`,
-        sendAt: todayAt(16, 0),
-        status: 'Scheduled',
-        channel: 'WhatsApp',
-      }
-      return { ...next, reminders: [...next.reminders, reminder] }
-    })
+    const appt: Appointment = {
+      id: uid('a'),
+      patientId,
+      clinicianId: input.clinicianId,
+      serviceId: input.serviceId,
+      start: input.day === 'today' ? todayAt(h, m) : tomorrowAt(h, m),
+      status: input.confirm ? 'Confirmed' : 'Booked',
+    }
+    // Tomorrow's visits also get the usual day-before reminder, linked to the appointment.
+    const reminder: Reminder | null =
+      input.day === 'tomorrow'
+        ? {
+            id: uid('rem'),
+            kind: 'day-before',
+            patientId,
+            appointmentId: appt.id,
+            clinicianId: input.clinicianId,
+            when: `tomorrow at ${input.time}`,
+            sendAt: todayAt(16, 0),
+            status: 'Scheduled',
+            channel: 'WhatsApp',
+          }
+        : null
+    setState((s) => ({
+      ...s,
+      patients: newPatient ? [...s.patients, newPatient] : s.patients,
+      appointments: [...s.appointments, appt],
+      reminders: reminder ? [...s.reminders, reminder] : s.reminders,
+    }))
     const who = newPatient?.name ?? patientName(patientId)
     toast(
-      `Booked ${who} with ${doctor?.short} ${input.day} at ${input.time}.${input.confirm ? ' WhatsApp confirmation sent.' : ''}`,
+      `Booked ${who} with ${doctor?.short} ${input.day} at ${input.time}.${input.confirm ? ' WhatsApp confirmation sent.' : ''}${input.day === 'tomorrow' ? ' It’s under Tomorrow on the front desk.' : ''}`,
       'success',
     )
   }
@@ -169,6 +173,11 @@ export default function ClinicPharmacyDemo() {
             let next: ClinicState = {
               ...s,
               reminders: s.reminders.map((r) => (r.id === id ? { ...r, status: reply.status, reply: reply.text, repliedAt } : r)),
+              // A "1" reply confirms the linked appointment.
+              appointments:
+                reply.status === 'Confirmed' && reminder.appointmentId
+                  ? s.appointments.map((a) => (a.id === reminder.appointmentId && a.status === 'Booked' ? { ...a, status: 'Confirmed' } : a))
+                  : s.appointments,
             }
             if (reminder.kind === 'refill' && reminder.medicineId) {
               const rx: Prescription = {
@@ -235,13 +244,24 @@ export default function ClinicPharmacyDemo() {
 
   const receive = (medicineId: string, batchNo: string, months: number, qty: number) => {
     const medicine = medicines.find((m) => m.id === medicineId)
+    // One entry per batch number: a repeat delivery of the same batch is added to it.
+    const existing = medicine?.batches.some((b) => b.batchNo === batchNo)
     setState((s) => ({
       ...s,
-      medicines: s.medicines.map((m) =>
-        m.id === medicineId ? { ...m, onOrder: false, batches: [...m.batches, { batchNo, expiry: todayAt(0, 0) + Math.round(months * 30.4) * DAY, qty }] } : m,
-      ),
+      medicines: s.medicines.map((m) => {
+        if (m.id !== medicineId) return m
+        const batches = m.batches.some((b) => b.batchNo === batchNo)
+          ? m.batches.map((b) => (b.batchNo === batchNo ? { ...b, qty: b.qty + qty } : b))
+          : [...m.batches, { batchNo, expiry: todayAt(0, 0) + Math.round(months * 30.4) * DAY, qty }]
+        return { ...m, onOrder: false, batches }
+      }),
     }))
-    toast(`Added ${qty} ${medicine?.unit} of ${medicine?.name} (batch ${batchNo}).`, 'success')
+    toast(
+      existing
+        ? `Added ${qty} ${medicine?.unit} to the existing batch ${batchNo} of ${medicine?.name}.`
+        : `Added ${qty} ${medicine?.unit} of ${medicine?.name} (batch ${batchNo}).`,
+      'success',
+    )
   }
 
   const removeExpired = (medicineId: string) => {
@@ -257,14 +277,15 @@ export default function ClinicPharmacyDemo() {
     toast(`Order for ${medicine?.name} sent to the supplier.`, 'success')
   }
 
-  const done = appointments.filter((a) => a.status === 'Done').length
+  const today = appointments.filter((a) => isSameDay(a.start, now))
+  const done = today.filter((a) => a.status === 'Done').length
   const confirmed = reminders.filter((r) => r.status === 'Confirmed').length
   const sentCount = reminders.filter((r) => r.status !== 'Scheduled').length
   const dispensed = prescriptions.filter((p) => p.status !== 'Waiting').length
   const waitingRx = prescriptions.filter((p) => p.status === 'Waiting').length
 
   useDemoMetrics([
-    { label: 'Appointments today', value: num(appointments.length), detail: `${done} seen so far` },
+    { label: 'Appointments today', value: num(today.length), detail: `${done} seen so far` },
     { label: 'Confirmed on WhatsApp', value: num(confirmed), detail: 'Patients who replied 1 to a reminder' },
     { label: 'Prescriptions dispensed', value: num(dispensed), detail: `${waitingRx} waiting at the pharmacy` },
     { label: 'Front-desk time saved (est.)', value: duration(sentCount * 3), detail: 'About 3 minutes per reminder phone call' },

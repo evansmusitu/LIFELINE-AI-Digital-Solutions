@@ -40,6 +40,7 @@ export function InboxScreen(props: Props) {
   const { conversations, selectedId, onSelect } = props
   const [filter, setFilter] = useState<Filter>('all')
   const [mobileDetail, setMobileDetail] = useState(false)
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
 
   const sorted = [...conversations].sort((a, b) => {
     const rank = (c: Conversation) => (c.status === 'waiting' ? 0 : c.live ? 1 : c.status === 'closed' ? 3 : 2)
@@ -133,7 +134,16 @@ export function InboxScreen(props: Props) {
 
       {selected && (
         <div className={cn('min-h-0 lg:h-[44rem] lg:overflow-y-auto xl:contents', !mobileDetail && 'max-lg:hidden')}>
-          <Thread {...props} conversation={selected} onBack={() => setMobileDetail(false)} />
+          {/* Keyed by conversation, and drafts are stored per conversation, so a reply typed for one
+              customer can never be sent to another. */}
+          <Thread
+            key={selected.id}
+            {...props}
+            conversation={selected}
+            draft={drafts[selected.id] ?? ''}
+            onDraft={(text) => setDrafts((d) => ({ ...d, [selected.id]: text }))}
+            onBack={() => setMobileDetail(false)}
+          />
           <LeadPanel {...props} conversation={selected} />
         </div>
       )}
@@ -160,8 +170,9 @@ function Thread({
   onHandBack,
   onClose,
   onBack,
-}: Props & { conversation: Conversation; onBack: () => void }) {
-  const [draft, setDraft] = useState('')
+  draft,
+  onDraft: setDraft,
+}: Props & { conversation: Conversation; onBack: () => void; draft: string; onDraft: (text: string) => void }) {
   const listRef = useRef<HTMLDivElement>(null)
   const canReply = conv.status === 'agent' && conv.assignedTo === DESIGNER
 

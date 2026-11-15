@@ -156,10 +156,16 @@ export function simulate(
       }
       case 'sheets.append': {
         const sheet = step.config.sheet || 'Sheet 1'
-        const values = field('columns')
-          .split(',')
-          .map((v) => v.trim())
-          .filter(Boolean)
+        // Split the column template first, then fill in each cell. Field values can contain commas
+        // ("$1,240.00", "Wool throw, Slate"), and an empty column keeps its position.
+        const template = step.config.columns ?? def.defaults.columns ?? ''
+        const values = template.trim()
+          ? template.split(',').map((cell) => {
+              const filled = render(cell.trim(), data)
+              missing.push(...filled.missing)
+              return filled.text
+            })
+          : []
         output = { kind: 'row', sheet, values }
         detail = `Row added to “${sheet}”`
         break

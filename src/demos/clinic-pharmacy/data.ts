@@ -1,4 +1,4 @@
-import { DAY, todayAt } from '../../lib/time'
+import { DAY, todayAt, tomorrowAt } from '../../lib/time'
 import type {
   Appointment,
   AppointmentStatus,
@@ -117,7 +117,29 @@ const APPOINTMENTS: ApptRow[] = [
   ['a24', 'p24', 'ndlovu', 'child', 11, 30, 'Booked'],
 ]
 
+/** Tomorrow's bookings. Each one has a day-before reminder in sampleReminders. */
+const TOMORROW: [id: string, patient: string, clinician: ClinicianId, service: ServiceId, h: number, m: number][] = [
+  ['t1', 'p25', 'mutasa', 'gp', 8, 0],
+  ['t2', 'p26', 'khumalo', 'chronic', 8, 30],
+  ['t3', 'p27', 'ndlovu', 'antenatal', 9, 0],
+  ['t4', 'p28', 'mutasa', 'chronic', 9, 15],
+  ['t5', 'p29', 'khumalo', 'gp', 10, 0],
+  ['t6', 'p30', 'ndlovu', 'bp', 10, 30],
+]
+
 function sampleAppointments(): Appointment[] {
+  const tomorrow: Appointment[] = TOMORROW.map(([id, patientId, clinicianId, serviceId, h, m]) => ({
+    id,
+    patientId,
+    clinicianId,
+    serviceId,
+    start: tomorrowAt(h, m),
+    status: 'Booked',
+  }))
+  return [...todaysAppointments(), ...tomorrow]
+}
+
+function todaysAppointments(): Appointment[] {
   return APPOINTMENTS.map(([id, patientId, clinicianId, serviceId, h, m, status, arrived, started]) => {
     const start = todayAt(h, m)
     const minutes = SERVICES.find((s) => s.id === serviceId)!.minutes
@@ -273,12 +295,12 @@ function sampleReminders(): Reminder[] {
     ['r6', 'same-day', 'p18', { when: 'today at 11:30', clinicianId: 'khumalo', status: 'Sent', sentAt: sent }],
     ['r7', 'same-day', 'p23', { when: 'today at 11:00', clinicianId: 'ndlovu', status: 'Confirmed', sentAt: sent, reply: '1', repliedAt: todayAt(7, 3) }],
     ['r8', 'same-day', 'p24', { when: 'today at 11:30', clinicianId: 'ndlovu', status: 'Sent', sentAt: sent }],
-    ['r9', 'day-before', 'p25', { when: 'tomorrow at 08:00', clinicianId: 'mutasa', status: 'Scheduled' }],
-    ['r10', 'day-before', 'p26', { when: 'tomorrow at 08:30', clinicianId: 'khumalo', status: 'Scheduled' }],
-    ['r11', 'day-before', 'p27', { when: 'tomorrow at 09:00', clinicianId: 'ndlovu', status: 'Scheduled' }],
-    ['r12', 'day-before', 'p28', { when: 'tomorrow at 09:20', clinicianId: 'mutasa', status: 'Scheduled' }],
-    ['r13', 'day-before', 'p29', { when: 'tomorrow at 10:00', clinicianId: 'khumalo', status: 'Scheduled', channel: 'SMS' }],
-    ['r14', 'day-before', 'p30', { when: 'tomorrow at 10:30', clinicianId: 'ndlovu', status: 'Scheduled' }],
+    ['r9', 'day-before', 'p25', { when: 'tomorrow at 08:00', clinicianId: 'mutasa', status: 'Scheduled', appointmentId: 't1' }],
+    ['r10', 'day-before', 'p26', { when: 'tomorrow at 08:30', clinicianId: 'khumalo', status: 'Scheduled', appointmentId: 't2' }],
+    ['r11', 'day-before', 'p27', { when: 'tomorrow at 09:00', clinicianId: 'ndlovu', status: 'Scheduled', appointmentId: 't3' }],
+    ['r12', 'day-before', 'p28', { when: 'tomorrow at 09:15', clinicianId: 'mutasa', status: 'Scheduled', appointmentId: 't4' }],
+    ['r13', 'day-before', 'p29', { when: 'tomorrow at 10:00', clinicianId: 'khumalo', status: 'Scheduled', channel: 'SMS', appointmentId: 't5' }],
+    ['r14', 'day-before', 'p30', { when: 'tomorrow at 10:30', clinicianId: 'ndlovu', status: 'Scheduled', appointmentId: 't6' }],
     ['r15', 'refill', 'p12', { medicineId: 'metf', status: 'Scheduled' }],
     ['r16', 'refill', 'p19', { medicineId: 'losa', status: 'Scheduled' }],
     ['r17', 'missed', 'p3', { when: 'today at 08:40', clinicianId: 'mutasa', status: 'Scheduled' }],
@@ -324,16 +346,20 @@ export function takeStock(medicine: Medicine, qty: number, now: number): { batch
   if (stockOf(medicine, now) < qty) return null
   let remaining = qty
   const used: { batchNo: string; qty: number }[] = []
-  const order = [...medicine.batches].sort((a, b) => a.expiry - b.expiry)
   const batches = medicine.batches.map((b) => ({ ...b }))
-  for (const b of order) {
+  // Work through the batch entries themselves (by position), first expiry first. Matching by batch
+  // number would take from the wrong entry if two deliveries share a number.
+  const order = batches.map((_, index) => index).sort((a, b) => batches[a].expiry - batches[b].expiry)
+  for (const index of order) {
     if (remaining === 0) break
+    const b = batches[index]
     if (b.expiry <= now || b.qty === 0) continue
     const take = Math.min(b.qty, remaining)
-    const target = batches.find((x) => x.batchNo === b.batchNo)!
-    target.qty -= take
+    b.qty -= take
     remaining -= take
-    used.push({ batchNo: b.batchNo, qty: take })
+    const previous = used.find((u) => u.batchNo === b.batchNo)
+    if (previous) previous.qty += take
+    else used.push({ batchNo: b.batchNo, qty: take })
   }
   return { batches: batches.filter((b) => b.qty > 0 || b.expiry <= now), used }
 }

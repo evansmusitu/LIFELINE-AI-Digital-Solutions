@@ -84,6 +84,8 @@ export interface Reminder {
   id: string
   kind: ReminderKind
   patientId: string
+  /** The appointment this reminder is about, so a patient's reply can confirm it. */
+  appointmentId?: string
   /** "Tomorrow 08:30" or "Today 11:15", as shown in the message. */
   when?: string
   clinicianId?: ClinicianId

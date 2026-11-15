@@ -7,7 +7,7 @@ import { useDemoClock } from '../../lib/time'
 import { useDemoMetrics } from '../metrics'
 import { DemoAppShell, type DemoScreen } from '../shell'
 import { CatalogueScreen } from './CatalogueScreen'
-import { AREAS, EMPTY_DETAILS, createInitialState } from './data'
+import { AREAS, EMPTY_DETAILS, MIN_DELIVERY_ORDER, createInitialState } from './data'
 import { nextStatus, statusMessage } from './message'
 import { OrderScreen, type Stage } from './OrderScreen'
 import { OrdersScreen, ProductsScreen } from './ShopScreens'
@@ -24,7 +24,6 @@ export default function WhatsAppOrderingDemo() {
   const [state, setState] = usePersistentState<OrderingState>(`${SLUG}.state`, createInitialState, { version: 1, freshDaily: true })
   const [screen, setScreen] = useState<ScreenId>('catalogue')
   const [stage, setStage] = useState<Stage>('details')
-  const [draft, setDraft] = useState<Order | null>(null)
   const [placedRef, setPlacedRef] = useState<string | null>(null)
 
   const { products, cart, details, orders } = state
@@ -84,19 +83,26 @@ export default function WhatsAppOrderingDemo() {
     }
   }
 
+  // The preview is rebuilt from the current basket, prices and details on every render, so a
+  // product sold out or repriced after previewing can never be submitted with old details.
+  const belowDeliveryMinimum = details.method === 'delivery' && subtotal < MIN_DELIVERY_ORDER
+  const draft = stage === 'preview' && cart.length > 0 && !belowDeliveryMinimum ? buildOrder(details) : null
+
   const preview = (d: Details) => {
     setState((s) => ({ ...s, details: d }))
-    setDraft(buildOrder(d))
     setStage('preview')
   }
 
   const place = (viaWhatsApp: boolean) => {
-    if (!draft) return
+    if (!draft) {
+      setStage('details')
+      toast(cart.length ? 'The order changed. Please check it and preview it again.' : 'Your order is empty. Add something from the menu first.', 'warning')
+      return
+    }
     const order = { ...draft, at: clock() }
     setState((s) => ({ ...s, orders: [order, ...s.orders], cart: [], nextRef: s.nextRef + 1, details: { ...EMPTY_DETAILS, name: s.details.name } }))
     setPlacedRef(order.ref)
     setStage('placed')
-    setDraft(null)
     toast(
       viaWhatsApp
         ? `Order ${order.ref} placed. WhatsApp opened with your demo order for LIFELINE.`
@@ -125,12 +131,15 @@ export default function WhatsAppOrderingDemo() {
     )
   }
 
-  const updateProduct = (product: Product) =>
+  const updateProduct = (product: Product) => {
+    const removed = !product.available && cart.some((l) => l.productId === product.id)
     setState((s) => ({
       ...s,
       products: s.products.map((p) => (p.id === product.id ? product : p)),
       cart: product.available ? s.cart : s.cart.filter((l) => l.productId !== product.id),
     }))
+    if (removed) toast(`${product.name} is sold out, so it was taken out of the customer’s order.`, 'info')
+  }
 
   const sales = orders.reduce((sum, o) => sum + o.total, 0)
   const waiting = orders.filter((o) => o.status === 'New').length

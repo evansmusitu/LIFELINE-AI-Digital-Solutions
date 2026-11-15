@@ -2,6 +2,7 @@ import { CalendarPlus, CircleCheck, Clock, DoorOpen, Pill, Plus, Trash2, UserChe
 import { useState } from 'react'
 import { cn } from '../../lib/cn'
 import { clockTime } from '../../lib/format'
+import { DAY, isSameDay } from '../../lib/time'
 import { AppButton, Badge, Field, Modal, Notice, Panel, Segmented, SelectInput, Stat, TextInput, Toggle, type Tone } from '../ui'
 import { CLINICIANS, DOSES, OFFERS, SERVICES, stockOf } from './data'
 import { ageLabel } from './messages'
@@ -42,20 +43,23 @@ export function TodayScreen({ appointments, patients, medicines, now, onCheckIn,
   const [clinician, setClinician] = useState<ClinicianId | 'all'>('all')
   const [completing, setCompleting] = useState<string | null>(null)
   const [booking, setBooking] = useState(false)
+  const [day, setDay] = useState<'today' | 'tomorrow'>('today')
 
   const patient = (id: string) => patients.find((p) => p.id === id)!
   const sorted = [...appointments].sort((a, b) => a.start - b.start)
-  const shown = sorted.filter((a) => clinician === 'all' || a.clinicianId === clinician)
-  const waiting = sorted.filter((a) => a.status === 'Arrived')
+  const today = sorted.filter((a) => isSameDay(a.start, now))
+  const tomorrow = sorted.filter((a) => isSameDay(a.start, now + DAY))
+  const shown = (day === 'today' ? today : tomorrow).filter((a) => clinician === 'all' || a.clinicianId === clinician)
+  const waiting = today.filter((a) => a.status === 'Arrived')
   const avgWait = waiting.length ? Math.round(waiting.reduce((sum, a) => sum + (now - (a.arrivedAt ?? now)), 0) / waiting.length / 60_000) : 0
-  const done = appointments.filter((a) => a.status === 'Done').length
-  const noShows = appointments.filter((a) => a.status === 'No-show').length
+  const done = today.filter((a) => a.status === 'Done').length
+  const noShows = today.filter((a) => a.status === 'No-show').length
   const completingAppt = appointments.find((a) => a.id === completing)
 
   return (
     <div className="space-y-4 p-3 sm:p-5">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat icon={Users} label="Appointments today" value={appointments.length} tone="accent" />
+        <Stat icon={Users} label="Appointments today" value={today.length} detail={`${tomorrow.length} booked for tomorrow`} tone="accent" />
         <Stat icon={CircleCheck} label="Seen so far" value={done} tone="green" />
         <Stat icon={DoorOpen} label="In the waiting room" value={waiting.length} detail={waiting.length ? `Average wait ${avgWait} min` : 'Nobody waiting'} tone="amber" />
         <Stat icon={UserX} label="No-shows" value={noShows} detail="Follow-ups in Reminders" tone="red" />
@@ -63,7 +67,7 @@ export function TodayScreen({ appointments, patients, medicines, now, onCheckIn,
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_20rem]">
         <Panel
-          title="Today’s appointments"
+          title={day === 'today' ? 'Today’s appointments' : 'Tomorrow’s appointments'}
           action={
             <AppButton size="sm" icon={CalendarPlus} onClick={() => setBooking(true)}>
               Book appointment
@@ -71,6 +75,17 @@ export function TodayScreen({ appointments, patients, medicines, now, onCheckIn,
           }
           bodyClassName="p-0"
         >
+          <div className="border-b border-slate-100 px-4 pt-3">
+            <Segmented
+              label="Day"
+              value={day}
+              onChange={setDay}
+              options={[
+                { value: 'today', label: `Today (${today.length})` },
+                { value: 'tomorrow', label: `Tomorrow (${tomorrow.length})` },
+              ]}
+            />
+          </div>
           <div className="no-scrollbar flex gap-1.5 relative overflow-x-auto border-b border-slate-100 px-4 py-3" role="group" aria-label="Filter by clinician">
             {[{ id: 'all' as const, short: 'Everyone' }, ...CLINICIANS].map((c) => (
               <button
@@ -92,7 +107,7 @@ export function TodayScreen({ appointments, patients, medicines, now, onCheckIn,
               const p = patient(a.patientId)
               const doc = CLINICIANS.find((c) => c.id === a.clinicianId)!
               const service = SERVICES.find((s) => s.id === a.serviceId)!
-              const late = (a.status === 'Booked' || a.status === 'Confirmed') && now - a.start > 15 * 60_000
+              const late = day === 'today' && (a.status === 'Booked' || a.status === 'Confirmed') && now - a.start > 15 * 60_000
               return (
                 <li key={a.id} className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3', a.status === 'With clinician' && 'bg-(--accent-soft)')}>
                   <p className="w-12 shrink-0 font-semibold text-slate-900 tabular-nums">{clockTime(a.start)}</p>
@@ -106,7 +121,7 @@ export function TodayScreen({ appointments, patients, medicines, now, onCheckIn,
                   </div>
                   <Badge tone={statusTone[a.status]}>{a.status}</Badge>
                   <div className="flex w-full justify-end gap-2 sm:w-auto">
-                    {(a.status === 'Booked' || a.status === 'Confirmed') && (
+                    {day === 'today' && (a.status === 'Booked' || a.status === 'Confirmed') && (
                       <>
                         {late && (
                           <AppButton variant="secondary" size="sm" onClick={() => onNoShow(a.id)}>
@@ -287,15 +302,16 @@ function CompleteVisit({
 }
 
 function slotsFor(appointments: Appointment[], clinicianId: ClinicianId, day: 'today' | 'tomorrow', now: number): string[] {
+  const date = day === 'today' ? now : now + DAY
   const taken = new Set(
-    appointments.filter((a) => a.clinicianId === clinicianId).map((a) => clockTime(a.start)),
+    appointments.filter((a) => a.clinicianId === clinicianId && isSameDay(a.start, date) && a.status !== 'No-show').map((a) => clockTime(a.start)),
   )
   const nowMinutes = new Date(now).getHours() * 60 + new Date(now).getMinutes()
   const slots: string[] = []
   for (let minutes = 8 * 60; minutes <= 16 * 60 + 30; minutes += 15) {
     if (minutes >= 12 * 60 + 30 && minutes < 13 * 60 + 30) continue
     const label = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
-    if (day === 'today' && (minutes <= nowMinutes + 10 || taken.has(label))) continue
+    if (taken.has(label) || (day === 'today' && minutes <= nowMinutes + 10)) continue
     slots.push(label)
   }
   return slots

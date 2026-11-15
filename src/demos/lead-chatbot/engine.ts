@@ -189,24 +189,74 @@ function parseProjectType(t: string): string | undefined {
   return undefined
 }
 
-function parseSize(t: string): string | undefined {
-  const plain = t.replace(/,/g, '')
-  let sqft: number | undefined
-  const people = plain.match(/(\d+)\s*(people|staff|employees|desks|seats|team members|persons)/)
-  if (people) sqft = parseInt(people[1], 10) * 100
-  if (sqft === undefined) {
-    const match = plain.match(
-      /(\d+(?:\.\d+)?)\s*(k)?\s*(sq\.?\s*ft|sqft|square\s*f[eo]+t|ft2|ft²|sq\.?\s*m|sqm|square\s*met(?:er|re)s?|m2|m²)?/,
-    )
-    if (!match) return undefined
-    sqft = parseFloat(match[1]) * (match[2] ? 1000 : 1)
-    const unit = match[3] ?? ''
-    if (unit && !unit.includes('f')) sqft *= 10.764
-  }
+/*
+ * Number phrases tied to one kind of answer. A message such as "budget $30,000 for 1,000 sq ft"
+ * contains numbers for two questions, so each reader only uses the numbers tied to it.
+ * All patterns run on lower-case text with thousands separators removed.
+ */
+const AREA = /(\d+(?:\.\d+)?)\s*(k)?\s*(sq\.?\s*ft|sqft|square\s*f(?:ee|oo)t|ft2|ft²|sq\.?\s*m\b|sqm|square\s*met(?:er|re)s?|m2|m²)/g
+const PEOPLE = /(\d+)\s*(people|staff|employees|desks|seats|team members|persons)\b/g
+const DURATION = /\d+\s*(?:months?|mos?|weeks?|days?|years?)\b/g
+const SCALE = String.raw`(k|m|thousand|million|mil)?\b`
+const RANGE_END = String.raw`(?:\s*(?:-|–|—|to|and)\s*\$?\s*(\d+(?:\.\d+)?)\s*${SCALE})?`
+/** "$90k", "usd 25000 to 40000", "AED 150,000" */
+const MONEY_BEFORE = new RegExp(String.raw`(\$|us\$|usd|aed|dhs?\b|dirhams?)\s*(\d+(?:\.\d+)?)\s*${SCALE}${RANGE_END}`, 'g')
+/** "90k USD", "150,000 dollars", "25 to 40k dirhams" */
+const MONEY_AFTER = new RegExp(
+  String.raw`(\d+(?:\.\d+)?)\s*${SCALE}(?:\s*(?:-|–|—|to|and)\s*(\d+(?:\.\d+)?)\s*${SCALE})?\s*(usd|us dollars|dollars?|aed|dirhams?|dhs?)\b`,
+  'g',
+)
+/** "budget of 90k", "budget is around 120000" */
+const BUDGET_WORD = new RegExp(String.raw`budget\D{0,20}?(\d+(?:\.\d+)?)\s*${SCALE}${RANGE_END}`, 'g')
+
+function scale(value: number, unit?: string): number {
+  if (unit === 'k' || unit === 'thousand') return value * 1_000
+  if (unit === 'm' || unit === 'million' || unit === 'mil') return value * 1_000_000
+  return value
+}
+
+/** Midpoint of "25 to 40k" or a single amount. A range start without a unit takes the end's unit. */
+function amount(start: string, startUnit: string | undefined, end?: string, endUnit?: string): number {
+  const first = scale(parseFloat(start), startUnit ?? endUnit)
+  if (!end) return first
+  return (first + scale(parseFloat(end), endUnit ?? startUnit)) / 2
+}
+
+const isAed = (currency?: string) => Boolean(currency && /aed|dh|dirham/.test(currency))
+
+/** Removes number phrases that belong to other answers, so bare numbers can be read safely. */
+function withoutOtherNumbers(plain: string, keep: 'size' | 'budget'): string {
+  let rest = plain.replace(DURATION, ' ')
+  if (keep !== 'size') rest = rest.replace(AREA, ' ').replace(PEOPLE, ' ')
+  if (keep !== 'budget') rest = rest.replace(MONEY_BEFORE, ' ').replace(MONEY_AFTER, ' ').replace(BUDGET_WORD, ' ')
+  return rest
+}
+
+function sizeBand(sqft: number): string {
   if (sqft < 1000) return 'xs'
   if (sqft < 5000) return 's'
   if (sqft <= 15000) return 'm'
   return 'l'
+}
+
+/**
+ * Floor area from "6,000 sq ft", "550 m²" or "30 people". With `lenient`, used when the
+ * visitor is answering the size question, a single bare number such as "5000" also counts.
+ */
+function parseSize(t: string, lenient = true): string | undefined {
+  const plain = t.replace(/,/g, '')
+  const area = [...plain.matchAll(AREA)][0]
+  if (area) {
+    let sqft = parseFloat(area[1]) * (area[2] ? 1000 : 1)
+    if (!area[3].includes('f')) sqft *= 10.764
+    return sizeBand(sqft)
+  }
+  const people = [...plain.matchAll(PEOPLE)][0]
+  if (people) return sizeBand(parseInt(people[1], 10) * 100)
+  if (!lenient) return undefined
+  const bare = [...withoutOtherNumbers(plain, 'size').matchAll(/(\d+(?:\.\d+)?)\s*(k)?\b/g)]
+  if (bare.length !== 1) return undefined
+  return sizeBand(parseFloat(bare[0][1]) * (bare[0][2] ? 1000 : 1))
 }
 
 function parseTimeline(t: string): string | undefined {
@@ -227,12 +277,27 @@ function parseTimeline(t: string): string | undefined {
   return undefined
 }
 
-function parseBudget(t: string): string | undefined {
-  if (has(t, /not sure|no idea|don'?t know|tbc|unsure|flexible|no budget|depends/)) return 'unsure'
-  const values = parseNumbers(t)
+/**
+ * Budget in USD from amounts tied to a currency or the word "budget". With `lenient`, used when
+ * the visitor is answering the budget question, bare numbers count too, ignoring any area,
+ * headcount or duration in the same message.
+ */
+function parseBudget(t: string, lenient = true): string | undefined {
+  if (lenient && has(t, /not sure|no idea|don'?t know|tbc|unsure|flexible|no budget|depends/)) return 'unsure'
+  const plain = t.replace(/,/g, '')
+  const values: number[] = []
+  for (const m of plain.matchAll(MONEY_BEFORE)) {
+    const usd = amount(m[2], m[3], m[4], m[5])
+    values.push(isAed(m[1]) ? usd / 3.6725 : usd)
+  }
+  for (const m of plain.matchAll(MONEY_AFTER)) {
+    const usd = amount(m[1], m[2], m[3], m[4])
+    values.push(isAed(m[5]) ? usd / 3.6725 : usd)
+  }
+  if (!values.length) for (const m of plain.matchAll(BUDGET_WORD)) values.push(amount(m[1], m[2], m[3], m[4]))
+  if (!values.length && lenient) values.push(...parseNumbers(withoutOtherNumbers(plain, 'budget')))
   if (!values.length) return undefined
-  let value = values.reduce((sum, v) => sum + v, 0) / values.length
-  if (has(t, /aed|dhs?\b|dirham/)) value /= 3.6725
+  const value = values.reduce((sum, v) => sum + v, 0) / values.length
   if (value < 1000) return undefined
   if (value < 25_000) return 'b1'
   if (value <= 100_000) return 'b2'
@@ -250,9 +315,9 @@ function parseRole(t: string): string | undefined {
 
 const PARSERS: Record<QuestionId, (t: string) => string | undefined> = {
   projectType: parseProjectType,
-  size: parseSize,
+  size: (t) => parseSize(t),
   timeline: parseTimeline,
-  budget: parseBudget,
+  budget: (t) => parseBudget(t),
   role: parseRole,
 }
 
@@ -268,10 +333,10 @@ const STRICT_PARSERS: Record<QuestionId, (t: string) => string | undefined> = {
     if (has(t, /new (office|space|premises|floor|unit)|moving|relocat|fit.?out|empty unit|shell/)) return 'new-office'
     return undefined
   },
-  size: (t) => (has(t.replace(/,/g, ''), /\d\s*(k\s*)?(sq|square|ft|m2|m²|people|staff|employees|desks|seats)/) ? parseSize(t) : undefined),
+  size: (t) => parseSize(t, false),
   timeline: (t) =>
     has(t, /month|week|asap|as soon as possible|urgent|immediately|right away|next year|quarter/) ? parseTimeline(t) : undefined,
-  budget: (t) => (has(t, /\$|usd|aed|dollars?|dirhams?|budget/) && has(t, /\d/) ? parseBudget(t) : undefined),
+  budget: (t) => parseBudget(t, false),
   role: (t) => (has(t, /owner|ceo|founder|director|my decision|i decide|my partners|my boss|on behalf/) ? parseRole(t) : undefined),
 }
 
@@ -296,13 +361,8 @@ function extractAnswers(text: string, conv: Conversation, settings: Settings, cu
   const found: Answers = {}
   const byNumber = parseOptionByText(current, text)
   if (byNumber) return { [current]: byNumber }
-  const money = has(text, /\$|usd|aed|dollars?|dirhams?|budget/)
-  const area = has(text.replace(/,/g, ''), /\d\s*(k\s*)?(sq|square|ft|m2|m²|people|staff|employees|desks|seats)/)
   for (const q of QUESTION_ORDER) {
     if (!settings.questions[q] || (conv.answers[q] && q !== current)) continue
-    // Don't read "$90k" as a floor area, or "3,000 sq ft" as a budget.
-    if (q === current && q === 'size' && money && !area) continue
-    if (q === current && q === 'budget' && area && !money) continue
     const value = q === current ? PARSERS[q](text) : STRICT_PARSERS[q](text)
     if (value) found[q] = value
   }

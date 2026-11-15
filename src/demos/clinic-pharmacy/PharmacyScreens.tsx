@@ -152,11 +152,19 @@ export function StockScreen({ medicines, now, onReceive, onRemoveExpired, onOrde
 }
 
 function ReceiveModal({ medicine, onClose, onSave }: { medicine: Medicine; onClose: () => void; onSave: (batchNo: string, months: number, qty: number) => void }) {
-  const [batchNo, setBatchNo] = useState(`${medicine.batches[0]?.batchNo.slice(0, 2) ?? 'BT'}2611`)
+  const [batchNo, setBatchNo] = useState(() => {
+    // Suggest a batch number this medicine doesn't already have.
+    const base = `${medicine.batches[0]?.batchNo.slice(0, 2) ?? 'BT'}2611`
+    const used = new Set(medicine.batches.map((b) => b.batchNo))
+    let suggestion = base
+    for (let i = 2; used.has(suggestion); i++) suggestion = `${base}-${i}`
+    return suggestion
+  })
   const [months, setMonths] = useState(18)
   const [qty, setQty] = useState(String(Math.max(medicine.reorderLevel, 10)))
   const n = Number(qty)
   const valid = batchNo.trim().length >= 3 && Number.isInteger(n) && n > 0 && n <= 10000
+  const existing = medicine.batches.find((b) => b.batchNo === batchNo.trim().toUpperCase())
   return (
     <Modal
       open
@@ -176,8 +184,19 @@ function ReceiveModal({ medicine, onClose, onSave }: { medicine: Medicine; onClo
       }
     >
       <div className="space-y-4">
-        <Field label="Batch number" htmlFor="rcv-batch">
-          <TextInput id="rcv-batch" value={batchNo} onChange={(e) => setBatchNo(e.target.value)} maxLength={12} className="font-mono uppercase" />
+        <Field
+          label="Batch number"
+          htmlFor="rcv-batch"
+          hint={existing ? `Batch ${existing.batchNo} is already in stock. This delivery will be added to it, with its expiry date.` : undefined}
+        >
+          <TextInput
+            id="rcv-batch"
+            value={batchNo}
+            onChange={(e) => setBatchNo(e.target.value)}
+            maxLength={12}
+            aria-describedby={existing ? 'rcv-batch-hint' : undefined}
+            className="font-mono uppercase"
+          />
         </Field>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Expires in" htmlFor="rcv-expiry">

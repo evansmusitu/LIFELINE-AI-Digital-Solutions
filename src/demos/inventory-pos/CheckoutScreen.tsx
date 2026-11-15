@@ -1,4 +1,4 @@
-import { Banknote, CreditCard, ScanBarcode, Search, ShoppingCart, Smartphone, Trash2 } from 'lucide-react'
+import { Banknote, CreditCard, ScanBarcode, Search, ShoppingCart, Smartphone, Trash2, TriangleAlert } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { cn } from '../../lib/cn'
 import { money, round2 } from '../../lib/format'
@@ -46,6 +46,15 @@ export function CheckoutScreen({ products, cart, onCart, onComplete, onWarn }: P
   const totals = priceSale(lines, discountRate)
   const tendered = Number(cash)
   const cashShort = payment === 'Cash' && !(tendered >= totals.total)
+  // Stock can change on the Inventory screen while items sit in the basket.
+  const overStock = lines.filter((line) => line.qty > (products.find((p) => p.sku === line.sku)?.onHand ?? 0))
+
+  const fitToStock = () =>
+    onCart(
+      cart
+        .map((item) => ({ ...item, qty: Math.min(item.qty, products.find((p) => p.sku === item.sku)?.onHand ?? 0) }))
+        .filter((item) => item.qty > 0),
+    )
 
   const add = (sku: string) => {
     const product = products.find((p) => p.sku === sku)
@@ -71,7 +80,7 @@ export function CheckoutScreen({ products, cart, onCart, onComplete, onWarn }: P
   const setQty = (sku: string, qty: number) => onCart(qty <= 0 ? cart.filter((c) => c.sku !== sku) : cart.map((c) => (c.sku === sku ? { ...c, qty } : c)))
 
   const complete = () => {
-    if (!lines.length || cashShort) return
+    if (!lines.length || cashShort || overStock.length) return
     onComplete(lines, discountRate, payment, payment === 'Cash' ? round2(tendered) : undefined)
     setCash('')
     setDiscountRate(0)
@@ -192,6 +201,21 @@ export function CheckoutScreen({ products, cart, onCart, onComplete, onWarn }: P
             </ul>
           )}
 
+          {overStock.length > 0 && (
+            <Notice tone="amber" icon={TriangleAlert} className="mt-4" title="Not enough stock for this sale">
+              <ul>
+                {overStock.map((line) => (
+                  <li key={line.sku}>
+                    {line.name}: {products.find((p) => p.sku === line.sku)?.onHand ?? 0} in stock, {line.qty} in the basket
+                  </li>
+                ))}
+              </ul>
+              <AppButton size="sm" variant="secondary" className="mt-2" onClick={fitToStock}>
+                Match the basket to stock
+              </AppButton>
+            </Notice>
+          )}
+
           <div className="mt-4">
             <label htmlFor="pos-discount" className="mb-1 block text-xs font-semibold text-slate-700">
               Discount
@@ -271,7 +295,7 @@ export function CheckoutScreen({ products, cart, onCart, onComplete, onWarn }: P
             </Notice>
           )}
 
-          <AppButton className="mt-4 h-12! w-full text-base!" onClick={complete} disabled={!lines.length || cashShort}>
+          <AppButton className="mt-4 h-12! w-full text-base!" onClick={complete} disabled={!lines.length || cashShort || overStock.length > 0}>
             {lines.length ? `Charge ${money(totals.total)}` : 'Charge'}
           </AppButton>
         </div>
