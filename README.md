@@ -86,15 +86,23 @@ sitemap all use it.
 
 ## Demos
 
-Batch 1 of 5 (numbers refer to the brief's list of 25):
+Batches 1 and 2 of 5 (numbers refer to the brief's list of 25):
 
 | # | Demo | Sample business | Screens |
 |---|---|---|---|
 | 1 | AI lead-qualification chatbot | Dunebridge Interiors, Dubai | Website chat, team inbox with handoff, leads, assistant settings |
+| 2 | AI customer support desk | Grysbok Outdoor, Cape Town | Customer help form, triage inbox with suggested replies, reports, automation rules |
 | 3 | Workflow automation builder | Hartwell Loom, Leeds | Workflows, builder, test run, run history, templates |
+| 4 | API integration hub | Linden Hollow Property Management, Atlanta | Connected apps and flows, live events, field mapping, errors and retries, connect an app |
+| 5 | Website health and security monitor | Hornbill Spray Lodge, Victoria Falls | Overview, uptime with a simulated outage, backups and restore, security fixes, alerts |
+| 6 | SEO audit tool | Avonmere Plumbing & Heating, Bristol | Audit score, fix list, search result preview, keywords and local listings |
+| 7 | Website redesign before and after | Kopje Spring Drilling, Harare | Comparison slider, what changed, results, the new site, enquiries |
 | 9 | WhatsApp ordering catalogue | Jacaranda & Rye Bakehouse, Harare | Menu, order and WhatsApp preview, shop orders, products |
 | 16 | Inventory and point of sale | Bramblewood Hardware & Garden, Austin | Checkout, inventory, reorder and purchase orders, daily sales |
 | 22 | Clinic and pharmacy system | Lindhaven Family Clinic & Pharmacy, Bulawayo | Front desk, reminders, dispensing, pharmacy stock |
+
+The SEO audit only checks its sample site. Its "Want a real audit of your own website?" panel sends the visitor's
+address to LIFELINE on WhatsApp.
 
 Every demo page has the conversion features from the brief: a "Get a quote for this demo" WhatsApp button with the
 demo name filled in, a sticky call-to-action bar on phones, live outcome metrics, a "How we'd build this for you"
@@ -119,4 +127,4 @@ ranges (UK 07700 900xxx), and consumer email addresses use `example.com`. Prices
 - Mobile first. Checked for horizontal overflow and clipped content at 320, 360, 414, 768 and 1024 px.
 - Text and button colours meet WCAG AA contrast. Tabs support arrow keys, dialogs close with Escape and return
   focus, and a skip link leads to the main content.
-- Each demo loads as its own small chunk (about 14 to 20 KB gzipped), so the home page stays light on slow connections.
+- Each demo loads as its own small chunk (about 14 to 24 KB gzipped), so the home page stays light on slow connections.
