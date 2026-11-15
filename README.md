@@ -71,7 +71,7 @@ sitemap all use it.
 
 | What | Where |
 |---|---|
-| Site address, WhatsApp number, tagline, headline, search description, services list | `src/config/site.ts` |
+| Site address, WhatsApp number, email, link to the earlier studio, tagline, headline, search description, services list | `src/config/site.ts` |
 | Pre-filled WhatsApp messages | `src/lib/whatsapp.ts` |
 | Brand colours (confirmed) and fonts | `@theme` in `src/index.css` |
 | Demo list, card text, "Try this" tips, "How we'd build this" timelines | `src/demos/registry.ts` |

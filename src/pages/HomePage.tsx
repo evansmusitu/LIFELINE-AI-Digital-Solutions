@@ -1,4 +1,4 @@
-import { ArrowRight, Bot, Check, FileText, MessageSquareText, PackageCheck } from 'lucide-react'
+import { ArrowRight, Bot, Check, ExternalLink, FileText, MessageSquareText, PackageCheck } from 'lucide-react'
 import { useId, useState, type FormEvent } from 'react'
 import { Button, LinkButton, WhatsAppButton } from '../components/Button'
 import { LogoBadge } from '../components/Logo'
@@ -7,6 +7,7 @@ import { WhatsAppIcon } from '../components/WhatsAppIcon'
 import { SERVICES, SITE } from '../config/site'
 import { DEMOS, INDUSTRIES, type DemoMeta, type Industry } from '../demos/registry'
 import { cn } from '../lib/cn'
+import { EMAIL_ENQUIRY_URL } from '../lib/email'
 import { paths } from '../lib/router'
 import { GENERAL_ENQUIRY, demoRequestMessage, enquiryMessage, openWhatsApp, whatsappUrl } from '../lib/whatsapp'
 
@@ -150,6 +151,21 @@ function Gallery() {
           ))}
         </ul>
 
+        <p className="mt-6 text-sm text-mist-300">
+          We’re adding new demos here. In the meantime,{' '}
+          <a
+            href={SITE.earlierStudioUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 font-semibold text-white underline underline-offset-4 hover:text-brand-cyan"
+          >
+            try 16 more in our earlier demo studio
+            <ExternalLink className="size-3.5" aria-hidden="true" />
+            <span className="sr-only"> (opens in a new tab)</span>
+          </a>
+          .
+        </p>
+
         <div className="mt-10 flex flex-col items-start gap-4 rounded-2xl border border-white/10 bg-ink-900 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="font-display text-lg font-semibold text-white">Need something different?</h3>
@@ -286,6 +302,11 @@ function Contact() {
               className="font-semibold text-white underline-offset-4 hover:underline"
             >
               {SITE.whatsappDisplay}
+            </a>
+            <br />
+            Email:{' '}
+            <a href={EMAIL_ENQUIRY_URL} className="font-semibold text-white underline-offset-4 hover:underline">
+              {SITE.email}
             </a>
             <br />
             {SITE.base}

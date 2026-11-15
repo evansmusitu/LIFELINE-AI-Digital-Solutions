@@ -1,6 +1,7 @@
 import { SITE } from '../config/site'
 import { DEMOS } from '../demos/registry'
 import { paths } from '../lib/router'
+import { EMAIL_ENQUIRY_URL } from '../lib/email'
 import { GENERAL_ENQUIRY, whatsappUrl } from '../lib/whatsapp'
 import { Wordmark } from './Logo'
 
@@ -28,6 +29,12 @@ export function SiteFooter() {
                   </a>
                 </li>
               ))}
+              <li>
+                <a href={SITE.earlierStudioUrl} target="_blank" rel="noopener noreferrer" className={footerLink}>
+                  16 more demos in our earlier studio
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -37,6 +44,11 @@ export function SiteFooter() {
               <li>
                 <a href={whatsappUrl(GENERAL_ENQUIRY)} target="_blank" rel="noopener noreferrer" className={footerLink}>
                   WhatsApp {SITE.whatsappDisplay}
+                </a>
+              </li>
+              <li>
+                <a href={EMAIL_ENQUIRY_URL} className={footerLink}>
+                  Email {SITE.email}
                 </a>
               </li>
               <li>
