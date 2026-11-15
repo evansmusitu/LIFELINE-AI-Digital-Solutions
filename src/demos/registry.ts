@@ -1,4 +1,16 @@
-import { Bot, ScanBarcode, ShoppingBag, Stethoscope, Workflow, type LucideIcon } from 'lucide-react'
+import {
+  Activity,
+  Bot,
+  Cable,
+  Headset,
+  PanelsLeftRight,
+  ScanBarcode,
+  SearchCheck,
+  ShoppingBag,
+  Stethoscope,
+  Workflow,
+  type LucideIcon,
+} from 'lucide-react'
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
 import type { Service } from '../config/site'
 
@@ -115,6 +127,62 @@ export const DEMOS: DemoMeta[] = [
     ...demoModule(() => import('./lead-chatbot')),
   },
   {
+    slug: 'ai-support-desk',
+    number: 2,
+    title: 'AI customer support desk',
+    category: 'AI & automation',
+    icon: Headset,
+    summary:
+      'An AI assistant reads every message, sorts it by topic and urgency, looks up the order and drafts the reply, so urgent problems never wait.',
+    intro:
+      'Write to an outdoor gear store as a customer and watch the assistant sort your message in seconds. Then work the team inbox: triage new tickets and send a suggested reply.',
+    highlights: [
+      'Email, WhatsApp and chat in one sorted inbox',
+      'Answers “where is my order?” straight away',
+      'Drafts replies with the order details filled in',
+    ],
+    tryThis: [
+      'Send “Where is my order SO-48213?” from Get help',
+      'Press “Triage new tickets” in the Inbox',
+      'Open an urgent ticket and send the suggested reply',
+    ],
+    industries: ['Retail & e-commerce', 'Professional services'],
+    business: { name: 'Grysbok Outdoor', location: 'Cape Town, South Africa' },
+    build: {
+      timeline: '3 to 6 weeks',
+      intro: 'Your assistant learns your products, policies and past tickets, so it sorts and answers the way your best agent would.',
+      steps: [
+        {
+          when: 'Week 1',
+          title: 'Learn how you support customers',
+          detail: 'We go through your past tickets with you to agree the topics, priorities, reply times and who handles what.',
+        },
+        {
+          when: 'Week 2',
+          title: 'Connect your channels and orders',
+          detail: 'Email, WhatsApp Business and website chat come into one inbox, linked to your online store’s orders.',
+        },
+        {
+          when: 'Weeks 3 to 4',
+          title: 'Set up triage and reply drafts',
+          detail: 'The assistant learns your topics and tone of voice, and the languages your customers write in.',
+        },
+        {
+          when: 'Weeks 5 to 6',
+          title: 'Test, launch and tune',
+          detail: 'Your team checks the assistant’s labels for a week before automatic answers go live. Then we review accuracy after 30 days.',
+        },
+      ],
+      services: [
+        'AI chatbots and virtual assistants',
+        'Customer support and lead generation',
+        'API integrations and AI-powered systems',
+        'Dashboards and data analytics',
+      ],
+    },
+    ...demoModule(() => import('./ai-support-desk')),
+  },
+  {
     slug: 'workflow-automation',
     number: 3,
     title: 'Workflow automation builder',
@@ -169,6 +237,228 @@ export const DEMOS: DemoMeta[] = [
       ],
     },
     ...demoModule(() => import('./workflow-automation')),
+  },
+  {
+    slug: 'api-integration-hub',
+    number: 4,
+    title: 'API integration hub',
+    category: 'AI & automation',
+    icon: Cable,
+    summary:
+      'Your CRM, payments, accounting, email and WhatsApp share data by themselves. Every hand-off is tracked, and failed ones are retried for you.',
+    intro:
+      'Follow a rent payment through five systems at a property management company. See what happens when one app goes offline, then reconnect it and watch nothing get lost.',
+    highlights: [
+      'Payments, CRM, accounting and WhatsApp in sync',
+      'Nothing lost when an app is down',
+      'Problems explained in plain English, with one-tap fixes',
+    ],
+    tryThis: [
+      'Press “Simulate a rent payment” and watch it reach every app',
+      'Reconnect Accounting on the Errors screen and watch the waiting payments go through',
+      'Connect the E-signatures app',
+    ],
+    industries: ['Property & construction', 'Professional services'],
+    business: { name: 'Linden Hollow Property Management', location: 'Atlanta, Georgia, US' },
+    build: {
+      timeline: '3 to 8 weeks, depending on the number of apps',
+      intro: 'We connect the tools you already pay for, so your team stops typing the same details into each one.',
+      steps: [
+        {
+          when: 'Week 1',
+          title: 'Map your systems',
+          detail: 'We list every tool you use, what each one needs to know and where your team retypes information today.',
+        },
+        {
+          when: 'Weeks 2 to 4',
+          title: 'Connect each app',
+          detail: 'We use each tool’s official connection (its API), with access keys stored securely and test accounts first.',
+        },
+        {
+          when: 'Weeks 4 to 6',
+          title: 'Mapping, retries and alerts',
+          detail: 'Fields are matched between apps, failed hand-offs retry automatically, and you’re alerted only when you need to act.',
+        },
+        {
+          when: 'Weeks 6 to 8',
+          title: 'Run side by side, then switch',
+          detail: 'The hub runs alongside your current process for a week, so you can check every record before you rely on it.',
+        },
+      ],
+      services: [
+        'API integrations and AI-powered systems',
+        'Business process and workflow automation',
+        'Cloud deployment, hosting and monitoring',
+        'Web applications and custom software',
+      ],
+    },
+    ...demoModule(() => import('./api-integration-hub')),
+  },
+  {
+    slug: 'website-health-monitor',
+    number: 5,
+    title: 'Website health and security monitor',
+    category: 'AI & automation',
+    icon: Activity,
+    summary:
+      'Know the minute your website goes down. Uptime checks, nightly off-site backups and a security score with one-tap fixes, with alerts on WhatsApp.',
+    intro:
+      'Open a safari lodge’s website care dashboard. Simulate an outage on the booking site, fix security issues until the score passes 90, and restore a backup safely.',
+    highlights: [
+      'Checks your sites every minute from 4 places',
+      'WhatsApp alert and automatic restart if a site goes down',
+      'Nightly off-site backups you can restore safely',
+    ],
+    tryThis: [
+      'Press “Simulate an outage” on Uptime and watch the alert and recovery',
+      'Fix the security issues until the score passes 90',
+      'Restore last night’s backup to a test copy',
+    ],
+    industries: ['Food & hospitality', 'Retail & e-commerce'],
+    business: { name: 'Hornbill Spray Lodge', location: 'Victoria Falls, Zimbabwe' },
+    build: {
+      timeline: '1 to 2 weeks to set up, then ongoing care',
+      intro: 'We look after your website like a building manager: watching it day and night, and fixing problems before guests notice.',
+      steps: [
+        {
+          when: 'Days 1 to 3',
+          title: 'Health check',
+          detail: 'We review your hosting, software versions, certificates, domain renewals and current backups.',
+        },
+        {
+          when: 'Week 1',
+          title: 'Monitoring and alerts',
+          detail: 'Your sites are checked every minute from several countries, with alerts to the right people on WhatsApp and email.',
+        },
+        {
+          when: 'Week 2',
+          title: 'Backups and security fixes',
+          detail: 'Nightly off-site backups with a test restore, safe updates, two-step login for staff and certificates that renew themselves.',
+        },
+        {
+          when: 'Ongoing',
+          title: 'Monthly care',
+          detail: 'Updates installed safely each month, and a one-page report on uptime, backups and security.',
+        },
+      ],
+      services: [
+        'Website security, backups and performance',
+        'Website maintenance and support',
+        'Cloud deployment, hosting and monitoring',
+      ],
+    },
+    ...demoModule(() => import('./website-health-monitor')),
+  },
+  {
+    slug: 'seo-audit',
+    number: 6,
+    title: 'SEO audit tool',
+    category: 'AI & automation',
+    icon: SearchCheck,
+    summary:
+      'Find out why customers can’t find you in search. A score for every part of your site and a plain-English fix list, ordered by what matters most.',
+    intro:
+      'Audit a Bristol plumber’s website, fix the problems that matter most and run the audit again to watch the score climb. Then ask us to check your own site.',
+    highlights: [
+      'Score and fix list in plain English',
+      'Search result preview with live checks',
+      'Local search checks for trades and shops',
+    ],
+    tryThis: [
+      'Press “Run a new audit” and watch the score',
+      'Shorten the home page title in Search preview and save it',
+      'Mark the top fixes as done, then run the audit again',
+    ],
+    industries: ['Property & construction', 'Professional services'],
+    business: { name: 'Avonmere Plumbing & Heating', location: 'Bristol, UK' },
+    build: {
+      timeline: '1 week for the audit, then 4 to 8 weeks of fixes',
+      intro: 'We fix what holds your site back in search, biggest problems first. Nobody can promise the top spot, but every fix makes you easier to find.',
+      steps: [
+        {
+          when: 'Week 1',
+          title: 'Full audit and plan',
+          detail: 'We check every page, your speed on mobile and your map and directory listings, then agree a fix list in plain English.',
+        },
+        {
+          when: 'Weeks 2 to 3',
+          title: 'Technical and speed fixes',
+          detail: 'Broken links, slow images, missing sitemap and mobile problems fixed first, because they affect every page.',
+        },
+        {
+          when: 'Weeks 3 to 6',
+          title: 'Content and local search',
+          detail: 'Titles and descriptions written for real searches, stronger service and area pages, and the same details on every listing.',
+        },
+        {
+          when: 'Ongoing',
+          title: 'Track and report',
+          detail: 'Each month you see your score, your positions for the searches that matter and what we’re fixing next.',
+        },
+      ],
+      services: [
+        'SEO and website optimisation',
+        'Website design, development and redesign',
+        'Website security, backups and performance',
+      ],
+    },
+    ...demoModule(() => import('./seo-audit')),
+  },
+  {
+    slug: 'website-redesign',
+    number: 7,
+    title: 'Website redesign: before and after',
+    category: 'AI & automation',
+    icon: PanelsLeftRight,
+    summary:
+      'See a dated, slow website become fast, clear and built for phones, with the call and WhatsApp buttons right where customers look.',
+    intro:
+      'Drag the slider across a borehole company’s old and new website, see what changed and why, then send an enquiry from the new site and find it on the team side.',
+    highlights: [
+      'Before and after on phone and desktop',
+      '8 changes explained in plain English',
+      'Enquiries arrive with name, phone and area',
+    ],
+    tryThis: [
+      'Drag the slider to compare the old and new home page',
+      'Open “What changed” and press “Show on the page” on any change',
+      'Send an enquiry from the New site, then find it in Enquiries',
+    ],
+    industries: ['Property & construction', 'Professional services'],
+    business: { name: 'Kopje Spring Drilling', location: 'Harare, Zimbabwe' },
+    build: {
+      timeline: '3 to 6 weeks',
+      intro: 'We rebuild your site around what customers came to do: find out what you offer, trust you and get in touch.',
+      steps: [
+        {
+          when: 'Week 1',
+          title: 'Review your current site',
+          detail: 'We look at what customers search for, which pages they use and where they give up, and agree what the new site must do.',
+        },
+        {
+          when: 'Week 2',
+          title: 'Design for phones first',
+          detail: 'You see the new look on your own phone and approve it before we build anything.',
+        },
+        {
+          when: 'Weeks 3 to 5',
+          title: 'Build and move your content',
+          detail: 'Fast pages, clear call and WhatsApp buttons and a short enquiry form. Old page addresses are redirected so your search ranking carries over.',
+        },
+        {
+          when: 'Week 6',
+          title: 'Launch and hand over',
+          detail: 'We launch, check every page on real phones and show your team how to update prices and photos.',
+        },
+      ],
+      services: [
+        'Website design, development and redesign',
+        'UI/UX design and digital branding',
+        'SEO and website optimisation',
+        'Website maintenance and support',
+      ],
+    },
+    ...demoModule(() => import('./website-redesign')),
   },
   {
     slug: 'whatsapp-ordering',
