@@ -19,9 +19,20 @@ npm run lint      # oxlint
 
 ## Deploy
 
-`npm run build` produces a static site in `dist/`. Upload that folder to any static host (appdeploy.ai, Netlify,
-Cloudflare Pages, GitHub Pages). Pages use hash URLs such as `#/demos/inventory-pos`, and asset paths are relative,
-so no server rewrites are needed and the site also works from a sub-folder.
+The site is hosted on Cloudflare Pages, connected to this GitHub repository:
+
+| Setting | Value |
+|---|---|
+| Production branch | `main` |
+| Framework preset | React (Vite) |
+| Build command | `npm run build` |
+| Build output directory | `dist` |
+| Node.js version | 22, read from `.nvmrc` |
+
+Every merge into `main` goes live, and every pull request gets its own preview link.
+
+`npm run build` produces a plain static site in `dist/`, so any other static host works too. Pages use hash URLs such
+as `#/demos/inventory-pos`, and asset paths are relative, so no server rewrites are needed.
 
 ## Logo
 
