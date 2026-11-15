@@ -7,7 +7,7 @@ The plan, brand rules and data policy are in [`handoff/PROJECT_BRIEF.md`](handof
 
 ## Run it
 
-Requires Node.js 20.19+ or 22.12+.
+Requires Node.js 22.12 or newer. Cloudflare builds the site with Node 24, set in `.nvmrc`.
 
 ```bash
 npm install
@@ -19,17 +19,23 @@ npm run lint      # oxlint
 
 ## Deploy
 
-The site is hosted on Cloudflare Pages, connected to this GitHub repository:
+The site is hosted on Cloudflare Workers as a static site. Workers Builds builds it from this GitHub repository,
+and the hosting settings are in `wrangler.jsonc`.
 
 | Setting | Value |
 |---|---|
+| Worker name | `lifeline-demo-studio`. It must match `name` in `wrangler.jsonc`, or builds fail. |
 | Production branch | `main` |
-| Framework preset | React (Vite) |
 | Build command | `npm run build` |
-| Build output directory | `dist` |
-| Node.js version | 22, read from `.nvmrc` |
+| Deploy command | `npx wrangler deploy` |
+| Preview command | `npx wrangler preview` |
+| Preview builds | On |
+| Node.js version | 24, read from `.nvmrc` |
 
-Every merge into `main` goes live, and every pull request gets its own preview link.
+Every merge into `main` goes live. Every push to another branch creates a Preview, and Cloudflare posts its link on
+the pull request. Preview links on `workers.dev` are public but tell search engines not to index them.
+
+A custom domain needs the domain's DNS to be managed by Cloudflare (the free plan is enough).
 
 `npm run build` produces a plain static site in `dist/`, so any other static host works too. Pages use hash URLs such
 as `#/demos/inventory-pos`, and asset paths are relative, so no server rewrites are needed.
