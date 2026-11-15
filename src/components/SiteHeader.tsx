@@ -1,4 +1,4 @@
-import { paths, sectionLinkHandler } from '../lib/router'
+import { paths } from '../lib/router'
 import { GENERAL_ENQUIRY } from '../lib/whatsapp'
 import { WhatsAppButton } from './Button'
 import { Wordmark } from './Logo'
@@ -14,10 +14,10 @@ export function SiteHeader() {
           <Wordmark />
         </a>
         <nav aria-label="Main" className="ml-auto flex items-center gap-1 sm:gap-2">
-          <a href={paths.demos} onClick={sectionLinkHandler('demos')} className={navLink}>
+          <a href={paths.demos} className={navLink}>
             Demos
           </a>
-          <a href={paths.contact} onClick={sectionLinkHandler('contact')} className={navLink}>
+          <a href={paths.contact} className={navLink}>
             Contact
           </a>
           <WhatsAppButton size="sm" message={GENERAL_ENQUIRY} label="WhatsApp us" iconOnlyOnMobile className="ml-1" />

@@ -7,7 +7,7 @@ import { WhatsAppIcon } from '../components/WhatsAppIcon'
 import { SERVICES, SITE } from '../config/site'
 import { DEMOS, INDUSTRIES, type DemoMeta, type Industry } from '../demos/registry'
 import { cn } from '../lib/cn'
-import { paths, sectionLinkHandler } from '../lib/router'
+import { paths } from '../lib/router'
 import { GENERAL_ENQUIRY, demoRequestMessage, enquiryMessage, openWhatsApp, whatsappUrl } from '../lib/whatsapp'
 
 export function HomePage() {
@@ -17,7 +17,7 @@ export function HomePage() {
       <Gallery />
       <Contact />
       <MobileCtaBar>
-        <LinkButton href={paths.contact} onClick={sectionLinkHandler('contact')} variant="secondary" className="shrink-0 px-4!">
+        <LinkButton href={paths.contact} variant="secondary" className="shrink-0 px-4!">
           Enquire
         </LinkButton>
         <WhatsAppButton message={GENERAL_ENQUIRY} label="Chat on WhatsApp" className="min-w-0 flex-1 px-4!" />
@@ -60,7 +60,7 @@ function Hero() {
             sample data, so you can explore freely and picture it with your own brand.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <LinkButton href={paths.demos} onClick={sectionLinkHandler('demos')} size="lg">
+            <LinkButton href={paths.demos} size="lg">
               Explore the demos
               <ArrowRight className="size-4" aria-hidden="true" />
             </LinkButton>
@@ -157,7 +157,7 @@ function Gallery() {
               We also build websites, online stores, dashboards and custom software. Tell us what your business needs.
             </p>
           </div>
-          <LinkButton href={paths.contact} onClick={sectionLinkHandler('contact')} variant="secondary" className="shrink-0">
+          <LinkButton href={paths.contact} variant="secondary" className="shrink-0">
             Tell us what you need
             <ArrowRight className="size-4" aria-hidden="true" />
           </LinkButton>

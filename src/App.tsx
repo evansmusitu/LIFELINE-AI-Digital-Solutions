@@ -3,7 +3,7 @@ import { SiteFooter } from './components/SiteFooter'
 import { SiteHeader } from './components/SiteHeader'
 import { ToastProvider } from './components/ToastProvider'
 import { findDemo } from './demos/registry'
-import { parseRoute, scrollToSection, useHash } from './lib/router'
+import { parseRoute, scrollToSection, useLocation } from './lib/router'
 import { DemoPage } from './pages/DemoPage'
 import { HomePage } from './pages/HomePage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -11,19 +11,29 @@ import { NotFoundPage } from './pages/NotFoundPage'
 const STUDIO_TITLE = 'LIFELINE AI CONCIERGE | Demo Studio'
 
 export default function App() {
-  const hash = useHash()
-  const route = parseRoute(hash)
+  const here = useLocation()
+  const route = parseRoute(here)
   const demo = route.name === 'demo' ? findDemo(route.slug) : undefined
   const firstLoad = useRef(true)
 
-  // Runs when the URL changes: page title, scroll position and focus.
+  // Runs on every navigation, including a repeat click on the same link: page title, scroll position and focus.
   useEffect(() => {
-    const current = parseRoute(hash)
+    const current = parseRoute(here)
     const currentDemo = current.name === 'demo' ? findDemo(current.slug) : undefined
     document.title = currentDemo ? `${currentDemo.title} demo | LIFELINE AI CONCIERGE` : STUDIO_TITLE
 
     const initial = firstLoad.current
     firstLoad.current = false
+
+    // Back or forward: return to where the visitor was, for example the demo card they opened.
+    const { restoreY } = here
+    if (restoreY !== undefined) {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, restoreY)
+        document.getElementById('page-title')?.focus({ preventScroll: true })
+      })
+      return
+    }
 
     if (current.name === 'home' && current.section) {
       const section = current.section
@@ -37,7 +47,7 @@ export default function App() {
     window.scrollTo(0, 0)
     // Move focus to the new page heading so screen readers announce the change.
     if (!initial) document.getElementById('page-title')?.focus({ preventScroll: true })
-  }, [hash])
+  }, [here])
 
   return (
     <ToastProvider>

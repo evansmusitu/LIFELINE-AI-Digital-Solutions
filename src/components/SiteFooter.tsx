@@ -1,6 +1,6 @@
 import { SITE } from '../config/site'
 import { DEMOS } from '../demos/registry'
-import { paths, sectionLinkHandler } from '../lib/router'
+import { paths } from '../lib/router'
 import { GENERAL_ENQUIRY, whatsappUrl } from '../lib/whatsapp'
 import { Wordmark } from './Logo'
 
@@ -40,7 +40,7 @@ export function SiteFooter() {
                 </a>
               </li>
               <li>
-                <a href={paths.contact} onClick={sectionLinkHandler('contact')} className={footerLink}>
+                <a href={paths.contact} className={footerLink}>
                   Send an enquiry
                 </a>
               </li>

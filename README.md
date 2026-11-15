@@ -38,8 +38,18 @@ the pull request. Preview links on `workers.dev` are public but tell search engi
 
 A custom domain needs the domain's DNS to be managed by Cloudflare (the free plan is enough).
 
-`npm run build` produces a plain static site in `dist/`, so any other static host works too. Pages use hash URLs such
-as `#/demos/inventory-pos`, and asset paths are relative, so no server rewrites are needed.
+### Links and pages
+
+Each demo has a clean link, such as `/demos/inventory-pos`. `npm run build` writes a separate HTML file for each
+one (`dist/demos/<slug>.html`) with that demo's title and summary, so WhatsApp link previews and search results name
+the demo. It also writes `sitemap.xml` and `robots.txt`. The code for this is the `studioPages` plugin in
+`vite.config.ts`, and the text comes from `src/config/site.ts` and `src/demos/registry.ts`.
+
+Home page sections use `/#demos` and `/#contact`. Old links such as `#/demos/inventory-pos` still work: they are
+redirected to the clean link when the page opens.
+
+Another static host works if it serves `demos/<slug>.html` at `/demos/<slug>` and sends unknown paths to
+`index.html`. The site must be served from the root of its address.
 
 ## Logo
 
@@ -54,14 +64,14 @@ as `#/demos/inventory-pos`, and asset paths are relative, so no server rewrites 
 At small sizes the site uses only the "L" icon, with the name in live text, because the thin "AI CONCIERGE"
 lettering is unreadable below about 120 px. If the logo changes, regenerate all three copies.
 
-The link-preview tags in `index.html` use absolute URLs on `https://lifeline-demo-studio.freelancer-d62.workers.dev/`.
-Update them if the site moves to another address.
+If the site moves to another address, change `url` in `src/config/site.ts`. Link previews, canonical links and the
+sitemap all use it.
 
 ## Where things live
 
 | What | Where |
 |---|---|
-| WhatsApp number, tagline, headline, services list | `src/config/site.ts` |
+| Site address, WhatsApp number, tagline, headline, search description, services list | `src/config/site.ts` |
 | Pre-filled WhatsApp messages | `src/lib/whatsapp.ts` |
 | Brand colours (confirmed) and fonts | `@theme` in `src/index.css` |
 | Demo list, card text, "Try this" tips, "How we'd build this" timelines | `src/demos/registry.ts` |

@@ -1,6 +1,11 @@
 /** Business details from handoff/PROJECT_BRIEF.md. Change them here and every page updates. */
 export const SITE = {
+  /** Live address, no trailing slash. Used for link previews, canonical links and the sitemap. */
+  url: 'https://lifeline-demo-studio.freelancer-d62.workers.dev',
   brand: 'LIFELINE AI CONCIERGE',
+  /** The home page's search-result description. Each demo page uses its card summary instead. */
+  description:
+    'Try live demos of the AI chatbots, workflow automation, WhatsApp ordering and business systems LIFELINE AI CONCIERGE builds. Smart Technology. Practical Innovation. Business Growth.',
   tagline: 'Smart Technology. Practical Innovation. Business Growth.',
   headline: 'See what AI and automation can do for your business.',
   headlineCta: 'Try it live.',
