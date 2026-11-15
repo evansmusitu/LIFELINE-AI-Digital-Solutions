@@ -96,7 +96,9 @@ function readStock(cell: string | undefined): Pick<PriceItem, 'stock' | 'stockTe
   if (cell === undefined || !cell.trim()) return { stock: 'unknown' }
   const c = cell.trim().toLowerCase()
   const back = /back (?:on|in)[^·;]*/i.exec(cell)?.[0].trim()
-  if (/out of stock|sold out|unavailable|^no$|^n$|^0$|none/.test(c)) return { stock: 'out', stockText: back }
+  // Negative wording first: "Not in stock" and "Not available" also contain the positive phrases.
+  if (/out of stock|sold out|unavailable|\bnot (?:in stock|available|stocked)\b|\bno stock\b|discontinued|^no$|^n$|^0$|none/.test(c))
+    return { stock: 'out', stockText: back }
   if (/low/.test(c)) return { stock: 'low' }
   if (/in stock|^yes$|^y$|available/.test(c) || Number(c) > 0) return { stock: 'in' }
   return { stock: 'unknown', stockText: cell.trim() }
@@ -111,7 +113,9 @@ export function rowItem(row: string[], schema: TableSchema): PriceItem | undefin
   const lower = pack.toLowerCase()
   const count = (re: RegExp) => {
     const m = re.exec(lower) ?? re.exec(name.toLowerCase())
-    return m ? Number(m[1].replace(/,/g, '')) : undefined
+    // Patterns with alternatives ("56 to a pallet" | "pallet of 56") fill different groups.
+    const raw = m?.slice(1).find((g) => g !== undefined)
+    return raw !== undefined ? Number(raw.replace(/,/g, '')) : undefined
   }
   const unitPart = lower.split('·')[0]
   const noun = NOUNS.find((n) => new RegExp(`\\b${n}\\b`).test(unitPart))
@@ -343,8 +347,10 @@ const WORD_NUMBERS: Record<string, number> = Object.fromEntries([
 const NUMBER_WORDS = new RegExp(`\\b(${Object.keys(WORD_NUMBERS).join('|')})\\b`, 'g')
 
 const UNITS = 'bulk bags?|pallets?|packs?|bags?|sheets?|lengths?|rolls?|box(?:es)?|tubes?|cans?|tiles?|slabs?|blocks?|bricks?|tubs?'
+/** A number followed by a size unit ("100 mm", "25 kg", "47 x 100") is a product size, not a quantity. */
+const SIZE_AFTER = String.raw`(?!\s*(?:mm|cm|m|kg|g|ml|l|ft|n|%)\b|\s*[x×]\s*\d)`
 const QTY_WITH_UNIT = new RegExp(
-  `\\b(\\d{1,5}|an?|couple of|dozen)\\s+(?:(?:[a-z][a-z’'-]*|\\d+(?:\\.\\d+)?\\s?(?:mm|kg|m))\\s+){0,2}?(${UNITS})\\b`,
+  `\\b(\\d{1,5}${SIZE_AFTER}|an?|couple of|dozen)\\s+(?:(?:[a-z][a-z’'-]*|\\d+(?:\\.\\d+)?\\s?(?:mm|kg|m))\\s+){0,2}?(${UNITS})\\b`,
 )
 const BARE_QTY =
   /(?<![\d.,$£€:×x/-])(?<!\b(?:type|class|grade|zone|no|number|size|day|the)\s)\b(\d{1,5})\b(?!\s*(?:mm|cm|m\b|kg|g\b|ml|l\b|ft|n\b|%|:|[.,]\d|x\s*\d|×|miles?|days?|hours?|months?|years?|weeks?|working|am\b|pm\b|th\b|st\b|nd\b|rd\b|°))/
@@ -551,7 +557,11 @@ function priceAnswer(
       const fee = free ? 0 : zone.fee
       working.push(`Delivery to ${place.name} (Zone ${zone.id}): ${free ? `free over ${moneyWhole(zone.freeOver!)}` : money(fee)}`)
       let extra = 0
-      if (flags.saturday) {
+      if (flags.sunday) {
+        // The answer says so in its delivery sentence; cite the policy line too.
+        const sunday = deliveryPassage(index, rulesOn, 'sunday deliver')
+        if (sunday) sources.push(toSource(sunday.passage, sunday.matched))
+      } else if (flags.saturday) {
         if (rulesOn.saturdayZones.includes(zone.id)) {
           extra += rulesOn.saturdayFee
           working.push(`Saturday delivery: ${money(rulesOn.saturdayFee)}`)
@@ -563,7 +573,9 @@ function priceAnswer(
       }
       const withDelivery = round2(total + fee + extra)
       working.push(`Total delivered: ${money(withDelivery)}`)
-      delivered = `Delivered to ${place.name}, it’s ${money(withDelivery)}${fee + extra === 0 ? ' with free delivery' : ''}.`
+      delivered = flags.sunday
+        ? `We don’t deliver on Sundays. Delivered to ${place.name} on a weekday, it’s ${money(withDelivery)}${fee + extra === 0 ? ' with free delivery' : ''}.`
+        : `Delivered to ${place.name}, it’s ${money(withDelivery)}${fee + extra === 0 ? ' with free delivery' : ''}.`
       const hit = deliveryPassage(index, rulesOn, `${place.key} zone`)
       if (hit) sources.push(toSource(hit.passage, [...hit.matched, ...placeTerms(place)]))
       if (palletised) {

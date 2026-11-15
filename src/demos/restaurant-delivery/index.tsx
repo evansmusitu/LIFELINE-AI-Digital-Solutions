@@ -16,6 +16,7 @@ import {
   daySummary,
   maskPhone,
   nextStatus,
+  manualStepAt,
   pickRider,
   simulatedStepAt,
   promisedFor,
@@ -126,7 +127,8 @@ export default function RestaurantDeliveryDemo() {
     const order = orders.find((o) => o.id === id)
     const next = order ? nextStatus(order) : null
     if (!order || !next) return
-    const at = clock()
+    // Never earlier than the order's latest step: "Let the kitchen run it" stamps steps ahead of the clock.
+    const at = manualStepAt(order, clock())
     const rider = next === 'out' ? (RIDERS.find((r) => r.id === riderId) ?? pickRider(orders, RIDERS)) : undefined
     const area = areas.find((a) => a.id === order.areaId)
     setState((s) => ({

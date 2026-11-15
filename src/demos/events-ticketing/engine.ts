@@ -92,17 +92,26 @@ export function soldByType(orders: Order[]): Record<TypeId, number> {
   return byType((id) => SEED_SOLD[id] + sumOf(orders.flatMap((o) => o.lines.filter((l) => l.type === id).map((l) => l.qty))))
 }
 
+/** Places left at the festival as a whole, across every ticket type. */
+export function capacityLeft(orders: Order[]): number {
+  return Math.max(0, FESTIVAL.totalCapacity - sumOf(Object.values(soldByType(orders))))
+}
+
 export function remainingByType(orders: Order[]): Record<TypeId, number> {
   const sold = soldByType(orders)
-  const totalLeft = Math.max(0, FESTIVAL.totalCapacity - sumOf(Object.values(sold)))
+  const totalLeft = capacityLeft(orders)
   return byType((id) => Math.max(0, Math.min(TYPE[id].capacity - sold[id], totalLeft)))
 }
 
-/** Problems that stop the order. Empty means it can go ahead. */
-export function cartIssues(cart: Cart, remaining: Record<TypeId, number>): string[] {
+/**
+ * Problems that stop the order. Empty means it can go ahead. `left` is the festival-wide capacity: each type
+ * can have a place left while the cart as a whole is still too big for the festival.
+ */
+export function cartIssues(cart: Cart, remaining: Record<TypeId, number>, left: number): string[] {
   const issues: string[] = []
   const count = sumOf(Object.values(cart))
   if (count > MAX_PER_ORDER) issues.push(`You can buy up to ${MAX_PER_ORDER} tickets in one order.`)
+  if (count > left) issues.push(left === 0 ? 'The festival is sold out.' : `Only ${left} ${left === 1 ? 'place is' : 'places are'} left at the festival.`)
   if (cart.child > 0 && !TYPES.some((t) => t.adult && cart[t.id] > 0))
     issues.push('Under 12 tickets need an adult ticket in the same order.')
   for (const t of TYPES)
@@ -112,9 +121,9 @@ export function cartIssues(cart: Cart, remaining: Record<TypeId, number>): strin
 }
 
 /** Highest quantity the stepper allows for one type, given the rest of the cart. */
-export function maxFor(id: TypeId, cart: Cart, remaining: Record<TypeId, number>): number {
+export function maxFor(id: TypeId, cart: Cart, remaining: Record<TypeId, number>, left: number): number {
   const others = sumOf(TYPE_IDS.filter((t) => t !== id).map((t) => cart[t]))
-  return Math.max(0, Math.min(remaining[id], MAX_PER_ORDER - others))
+  return Math.max(0, Math.min(remaining[id], MAX_PER_ORDER - others, left - others))
 }
 
 export function phoneDigits(raw: string): string {
@@ -176,7 +185,8 @@ export function issueTickets(order: Order, nextSerial: number, holders: Record<s
 export function placeOrder(state: FestivalState, draft: Draft, at: number, id: string) {
   const remaining = remainingByType(state.orders)
   const totals = orderTotals(draft.cart, draft.promo)
-  if (!totals.count || cartIssues(draft.cart, remaining).length || Object.keys(buyerIssues(draft.buyer)).length) return null
+  const left = capacityLeft(state.orders)
+  if (!totals.count || cartIssues(draft.cart, remaining, left).length || Object.keys(buyerIssues(draft.buyer)).length) return null
   const order: Order = {
     id,
     number: state.nextOrder,

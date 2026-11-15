@@ -20,6 +20,7 @@ import { AppButton, Badge, Field, Notice, Panel, QtyStepper, Segmented, TextInpu
 import { FESTIVAL, LINEUP, PROMO, TYPE, TYPES, ZIG_RATE } from './data'
 import {
   buyerIssues,
+  capacityLeft,
   cartIssues,
   daysToGo,
   longDate,
@@ -55,8 +56,9 @@ export function TicketsScreen({ now, festival, orders, draft, onDraft, paying, o
   const [tried, setTried] = useState(false)
   const [mobileFocus, setMobileFocus] = useState(false)
   const remaining = remainingByType(orders)
+  const left = capacityLeft(orders)
   const totals = orderTotals(draft.cart, draft.promo)
-  const issues = cartIssues(draft.cart, remaining)
+  const issues = cartIssues(draft.cart, remaining, left)
   const buyerErrors = buyerIssues(draft.buyer)
   const days = daysToGo(now, festival)
   const promoOn = Boolean(draft.promo && promoMatches(draft.promo))
@@ -145,7 +147,7 @@ export function TicketsScreen({ now, festival, orders, draft, onDraft, paying, o
                       {t.price ? money(t.price) : 'Free'}
                     </span>
                     {!soldOut && (
-                      <QtyStepper value={draft.cart[t.id]} onChange={(qty) => setQty(t.id, qty)} max={maxFor(t.id, draft.cart, remaining)} label={t.name} />
+                      <QtyStepper value={draft.cart[t.id]} onChange={(qty) => setQty(t.id, qty)} max={maxFor(t.id, draft.cart, remaining, left)} label={t.name} />
                     )}
                   </div>
                 </li>

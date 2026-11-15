@@ -242,6 +242,12 @@ export function simulatedStepAt(order: Pick<Order, 'mode' | 'status' | 'times' |
   return Math.max(now, previous + gap * MINUTE)
 }
 
+/** A step the team taps by hand happens now, but never before the order's latest recorded step. */
+export function manualStepAt(order: Pick<Order, 'times' | 'placedAt'>, now: number): number {
+  const stamps = Object.values(order.times).filter((t): t is number => typeof t === 'number')
+  return Math.max(now, order.placedAt, ...stamps)
+}
+
 /** The rider with the fewest orders on the road. Ties go to the first in the list. */
 export function pickRider(orders: Order[], riders: Rider[]): Rider {
   return riders.reduce((best, r) => (ridesOut(orders, r.id) < ridesOut(orders, best.id) ? r : best), riders[0])
