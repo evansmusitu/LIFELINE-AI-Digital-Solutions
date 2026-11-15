@@ -17,6 +17,10 @@ npm run preview   # serve the built site locally
 npm run lint      # oxlint
 ```
 
+Every pull request and every merge into `main` runs the **Check** workflow (`.github/workflows/check.yml`): a
+clean `npm ci`, `npm run lint` and `npm run build`, on the Node version in `.nvmrc`. Its pass or fail mark shows on
+the pull request.
+
 ## Deploy
 
 The site is hosted on Cloudflare Workers as a static site. Workers Builds builds it from this GitHub repository,
