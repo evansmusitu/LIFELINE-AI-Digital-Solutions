@@ -2,12 +2,17 @@ import {
   Activity,
   Bot,
   Cable,
+  FileSearch,
   Headset,
   PanelsLeftRight,
   ScanBarcode,
+  Scissors,
   SearchCheck,
   ShoppingBag,
+  SquareKanban,
   Stethoscope,
+  Ticket,
+  UtensilsCrossed,
   Workflow,
   type LucideIcon,
 } from 'lucide-react'
@@ -26,6 +31,8 @@ export const INDUSTRIES = [
   'Healthcare',
   'Professional services',
   'Property & construction',
+  'Beauty & wellness',
+  'Events & tourism',
 ] as const
 
 export type Industry = (typeof INDUSTRIES)[number]
@@ -461,6 +468,62 @@ export const DEMOS: DemoMeta[] = [
     ...demoModule(() => import('./website-redesign')),
   },
   {
+    slug: 'ai-document-assistant',
+    number: 8,
+    title: 'AI document assistant',
+    category: 'AI & automation',
+    icon: FileSearch,
+    summary:
+      'Ask your price list and policies a question and get the answer in seconds, with the source shown. When the documents don’t say, it says so instead of guessing.',
+    intro:
+      'Ask a builders’ merchant’s assistant about prices, delivery and returns, see where each answer comes from, then try it with your own price list or policy.',
+    highlights: [
+      'Answers from your own documents, with sources',
+      'Works out prices for any quantity',
+      'Try it with your own file. It stays in your browser',
+    ],
+    tryThis: [
+      'Ask “How much for 40 bags of Portland cement?” and check the source',
+      'Ask “Do you sell solar panels?” and add an answer for it in Insights',
+      'Upload your own price list or policy in Documents and ask about it',
+    ],
+    industries: ['Retail & e-commerce', 'Property & construction', 'Professional services'],
+    business: { name: 'Irkdale Building Supplies', location: 'Manchester, UK' },
+    build: {
+      timeline: '2 to 4 weeks',
+      intro: 'Your assistant reads your price lists, policies and manuals, answers staff and customers, and shows where every answer came from.',
+      steps: [
+        {
+          when: 'Week 1',
+          title: 'Gather your documents',
+          detail: 'Price lists, policies, manuals and FAQs in whatever form you have them: PDF, Word, Excel or web pages.',
+        },
+        {
+          when: 'Week 2',
+          title: 'Set up the assistant',
+          detail: 'It learns your documents and answers with sources. Anything it can’t find goes to a person instead of a guess.',
+        },
+        {
+          when: 'Week 3',
+          title: 'Put it where questions arrive',
+          detail: 'On your website, on WhatsApp Business and at the counter, with a handoff to your team for orders and quotes.',
+        },
+        {
+          when: 'Week 4',
+          title: 'Test, launch and keep it current',
+          detail: 'Your team checks real questions before launch. When you update a price list, the answers update with it.',
+        },
+      ],
+      services: [
+        'AI chatbots and virtual assistants',
+        'API integrations and AI-powered systems',
+        'Customer support and lead generation',
+        'Web applications and custom software',
+      ],
+    },
+    ...demoModule(() => import('./ai-document-assistant')),
+  },
+  {
     slug: 'whatsapp-ordering',
     number: 9,
     title: 'WhatsApp ordering catalogue',
@@ -515,6 +578,230 @@ export const DEMOS: DemoMeta[] = [
       ],
     },
     ...demoModule(() => import('./whatsapp-ordering')),
+  },
+  {
+    slug: 'restaurant-delivery',
+    number: 10,
+    title: 'Restaurant and delivery app',
+    category: 'Sales & customers',
+    icon: UtensilsCrossed,
+    summary:
+      'Customers order from your menu, the kitchen sees every ticket on one screen, and diners follow their food from the grill to their door.',
+    intro:
+      'Order dinner from an Abu Dhabi grill kitchen, then switch to the kitchen screen and cook it. Watch the customer’s tracker move, and take a dish off the menu when it runs out.',
+    highlights: [
+      'Menu with options, delivery areas and live ETAs',
+      'Kitchen screen with timers, instead of paper tickets',
+      'Order tracking customers can follow',
+    ],
+    tryThis: [
+      'Order a mixed grill with extra bread for delivery to Al Reem Island',
+      'Press “Start cooking” on your ticket in the Kitchen, then watch Track order',
+      'Switch off kunafa in the Menu manager and see it sold out on the Menu',
+    ],
+    industries: ['Food & hospitality'],
+    business: { name: 'Dhow & Thyme', location: 'Abu Dhabi, UAE' },
+    build: {
+      timeline: '4 to 7 weeks',
+      intro: 'Your own ordering app with no commission per order, a kitchen screen your chefs will actually use, and tracking your customers can trust.',
+      steps: [
+        {
+          when: 'Week 1',
+          title: 'Menu and delivery areas',
+          detail: 'We set up your dishes, options, prices and photos, plus delivery areas with fees, minimums and times.',
+        },
+        {
+          when: 'Weeks 2 to 3',
+          title: 'Ordering and payments',
+          detail: 'Ordering on your website and as an app on customers’ phones, with card, cash on delivery or your payment provider.',
+        },
+        {
+          when: 'Weeks 4 to 5',
+          title: 'Kitchen screen and riders',
+          detail: 'Tickets go straight to a kitchen tablet with timers. Riders get the address and customers get live updates by WhatsApp or SMS.',
+        },
+        {
+          when: 'Weeks 6 to 7',
+          title: 'Trial nights and launch',
+          detail: 'We run trial services with your team before launch, then watch the first busy weekend with you.',
+        },
+      ],
+      services: [
+        'E-commerce and online stores',
+        'Web applications and custom software',
+        'Dashboards and data analytics',
+        'UI/UX design and digital branding',
+      ],
+    },
+    ...demoModule(() => import('./restaurant-delivery')),
+  },
+  {
+    slug: 'salon-spa-booking',
+    number: 11,
+    title: 'Salon and spa booking',
+    category: 'Sales & customers',
+    icon: Scissors,
+    summary:
+      'Clients book the right stylist and time online, day or night. Deposits stop no-shows, and loyalty points and referral codes bring them back with friends.',
+    intro:
+      'Book a massage at a Johannesburg salon and spa, pay the deposit, then find the booking in the team calendar. Check the client in and redeem a reward on their loyalty card.',
+    highlights: [
+      'Online booking with each stylist’s real free times',
+      'Deposits that cut no-shows',
+      'Loyalty points and WhatsApp referral codes',
+    ],
+    tryThis: [
+      'Book a 90-minute Swedish massage with Kgomotso and pay the deposit',
+      'Find your booking in the Calendar and press “Check in”',
+      'Redeem a free blow-dry on the Loyalty card',
+    ],
+    industries: ['Beauty & wellness', 'Healthcare'],
+    business: { name: 'Sunbird & Sage Salon & Spa', location: 'Johannesburg, South Africa' },
+    build: {
+      timeline: '3 to 5 weeks',
+      intro: 'Online booking that knows each stylist’s diary, with deposits, reminders and a loyalty programme your clients will use.',
+      steps: [
+        {
+          when: 'Week 1',
+          title: 'Services, team and hours',
+          detail: 'We set up your treatments, prices and durations, who does what, working hours, breaks and your deposit rules.',
+        },
+        {
+          when: 'Week 2',
+          title: 'Online booking and deposits',
+          detail: 'Booking on your website and Instagram link, with deposits through your payment provider and calendar invites for clients.',
+        },
+        {
+          when: 'Weeks 3 to 4',
+          title: 'Reminders and loyalty',
+          detail: 'WhatsApp reminders the day before, rebooking prompts, points on every visit and referral codes clients can share.',
+        },
+        {
+          when: 'Week 5',
+          title: 'Move your clients over and launch',
+          detail: 'We import your client list and upcoming bookings, and train your team on the calendar.',
+        },
+      ],
+      services: [
+        'Web applications and custom software',
+        'Business process and workflow automation',
+        'Customer support and lead generation',
+        'UI/UX design and digital branding',
+      ],
+    },
+    ...demoModule(() => import('./salon-spa-booking')),
+  },
+  {
+    slug: 'crm-pipeline',
+    number: 12,
+    title: 'CRM and lead pipeline',
+    category: 'Sales & customers',
+    icon: SquareKanban,
+    summary:
+      'Every lead on one board with an owner and a next step. Reminders make sure nothing is forgotten, and proposals are priced in a minute.',
+    intro:
+      'Send an enquiry to a commercial cleaning company and watch it land on the sales board. Then build and send a proposal, and clear today’s follow-ups.',
+    highlights: [
+      'Pipeline board from new lead to won',
+      'Follow-up reminders created for you',
+      'Proposals priced from size and frequency',
+    ],
+    tryThis: [
+      'Send an enquiry from the Website form and find the new lead on the Pipeline',
+      'Open a deal, build a proposal and press “Send proposal”',
+      'Mark a follow-up as done on the Follow-ups screen',
+    ],
+    industries: ['Professional services', 'Property & construction'],
+    business: { name: 'Copperline Commercial Cleaning', location: 'Raleigh, North Carolina, US' },
+    build: {
+      timeline: '3 to 6 weeks',
+      intro: 'A sales system shaped around how you sell, not a generic CRM your team has to fight with.',
+      steps: [
+        {
+          when: 'Week 1',
+          title: 'Map how you sell',
+          detail: 'We agree your stages, what counts as a qualified lead, who owns what and how you price a job.',
+        },
+        {
+          when: 'Weeks 2 to 3',
+          title: 'Board, leads and proposals',
+          detail: 'Website forms, calls and WhatsApp enquiries all become leads, and proposals are priced from your own rates.',
+        },
+        {
+          when: 'Weeks 4 to 5',
+          title: 'Reminders and reports',
+          detail: 'Follow-ups created automatically, alerts for stuck deals and a weekly forecast for the owner.',
+        },
+        {
+          when: 'Week 6',
+          title: 'Import and train',
+          detail: 'We bring in your existing contacts and open deals from spreadsheets or email, and train your sales team.',
+        },
+      ],
+      services: [
+        'Customer support and lead generation',
+        'Web applications and custom software',
+        'Business process and workflow automation',
+        'Dashboards and data analytics',
+      ],
+    },
+    ...demoModule(() => import('./crm-pipeline')),
+  },
+  {
+    slug: 'events-ticketing',
+    number: 13,
+    title: 'Events and ticketing',
+    category: 'Sales & customers',
+    icon: Ticket,
+    summary:
+      'Sell tickets online with real QR codes, let buyers share and transfer them, and check people in at the gate in a second, with no paper lists.',
+    intro:
+      'Buy tickets for a Harare festival, send one to a friend on WhatsApp, then switch to the gate scanner and check it in. Scan it twice to see a duplicate stopped.',
+    highlights: [
+      'Real, scannable QR tickets',
+      'Gate scanner that stops duplicates',
+      'Live sales and check-in figures',
+    ],
+    tryThis: [
+      'Buy two General admission tickets with the code MSASA10',
+      'Open My tickets and send one to WhatsApp',
+      'Scan your ticket in the Scanner, then scan it again',
+    ],
+    industries: ['Events & tourism', 'Food & hospitality'],
+    business: { name: 'Msasa Sky Festival', location: 'Harare, Zimbabwe' },
+    build: {
+      timeline: '3 to 6 weeks',
+      intro: 'Your own ticket shop with your branding, with no per-ticket fees to a platform, and a gate app your volunteers can learn in a minute.',
+      steps: [
+        {
+          when: 'Week 1',
+          title: 'Event, tickets and prices',
+          detail: 'Ticket types, capacity, early-bird dates and promo codes, with payment by mobile money, card or bank transfer.',
+        },
+        {
+          when: 'Weeks 2 to 3',
+          title: 'Ticket shop and QR tickets',
+          detail: 'Tickets arrive by WhatsApp, SMS and email with a signed QR code that can’t be copied or reused.',
+        },
+        {
+          when: 'Weeks 4 to 5',
+          title: 'Gate scanning',
+          detail: 'Any phone becomes a scanner. It keeps working if the signal drops at the gate and syncs when it’s back.',
+        },
+        {
+          when: 'Week 6',
+          title: 'Test run and event day',
+          detail: 'We run a test entry with your gate team and stay on call on the day.',
+        },
+      ],
+      services: [
+        'E-commerce and online stores',
+        'Web applications and custom software',
+        'Dashboards and data analytics',
+        'Cloud deployment, hosting and monitoring',
+      ],
+    },
+    ...demoModule(() => import('./events-ticketing')),
   },
   {
     slug: 'inventory-pos',
