@@ -53,11 +53,19 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <p className="mt-10 border-t border-white/10 pt-6 text-xs leading-relaxed text-mist-400">
-          © {YEAR} {SITE.brand}. These demos show what we can build. They use invented businesses
-          and sample data, and they are not client projects. No real orders, payments, bookings or messages are
-          processed on this site.
-        </p>
+        <div className="mt-10 space-y-3 border-t border-white/10 pt-6 text-xs leading-relaxed text-mist-400">
+          <p>
+            <span className="font-semibold text-mist-300">Privacy.</span> This site uses no cookies, analytics or
+            tracking. Anything you type into a demo is saved only in your own browser, so the demo remembers it next
+            time, and Reset demo clears it. WhatsApp buttons open a chat with a message ready for you to edit. It
+            reaches LIFELINE only if you send it.
+          </p>
+          <p>
+            © {YEAR} {SITE.brand}. These demos show what we can build. They use invented businesses and sample data,
+            and they are not client projects. No real orders, payments, bookings or messages are processed on this
+            site.
+          </p>
+        </div>
       </div>
     </footer>
   )
