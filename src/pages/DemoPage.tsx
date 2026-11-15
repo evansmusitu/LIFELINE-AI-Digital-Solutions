@@ -5,6 +5,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary'
 import { LogoMark } from '../components/Logo'
 import { MobileCtaBar } from '../components/MobileCtaBar'
 import { SampleDataBadge } from '../components/SampleDataBadge'
+import { ShareDemo, ShareIconButton } from '../components/ShareDemo'
 import { useToast } from '../components/toast-context'
 import { MetricsContext, type DemoMetric } from '../demos/metrics'
 import { DEMOS, type DemoMeta } from '../demos/registry'
@@ -137,6 +138,11 @@ export function DemoPage({ demo }: { demo: DemoMeta }) {
         </div>
       </section>
 
+      {/* Right after the demo, when visitors have just seen what it does. */}
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+        <ShareDemo demo={demo} />
+      </div>
+
       <BuildPlan demo={demo} quote={quote} />
       <MoreDemos current={demo.slug} />
 
@@ -144,6 +150,7 @@ export function DemoPage({ demo }: { demo: DemoMeta }) {
         <LinkButton href={paths.demos} variant="secondary" className="size-11 shrink-0 px-0!" aria-label="All demos">
           <LayoutGrid className="size-5" aria-hidden="true" />
         </LinkButton>
+        <ShareIconButton demo={demo} />
         <WhatsAppButton
           message={quote}
           label="Get a quote for this demo"
