@@ -63,7 +63,7 @@ Update them if the site moves to another address.
 |---|---|
 | WhatsApp number, tagline, headline, services list | `src/config/site.ts` |
 | Pre-filled WhatsApp messages | `src/lib/whatsapp.ts` |
-| Brand colours and fonts (estimated colours, change once confirmed) | `@theme` in `src/index.css` |
+| Brand colours (confirmed) and fonts | `@theme` in `src/index.css` |
 | Demo list, card text, "Try this" tips, "How we'd build this" timelines | `src/demos/registry.ts` |
 | Studio pages (home, demo page frame, 404) | `src/pages/` |
 | Shared studio components (header, footer, buttons, mobile CTA bar, logo) | `src/components/` |
