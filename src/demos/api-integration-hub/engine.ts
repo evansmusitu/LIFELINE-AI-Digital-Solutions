@@ -383,7 +383,10 @@ function draftHop(flowId: FlowId, index: number, sample: Sample, record: DataRec
   }
 }
 
-/** Works out one hop's outcome from the current state: skipped, waiting, failed or sent. */
+/**
+ * Works out one hop's outcome from the current state: skipped, waiting, failed or sent.
+ * `at` is when the event happened. Resends pass the original event time, so the data sent is the data that was saved.
+ */
 export function decideHop(flowId: FlowId, index: number, sample: Sample, state: PlanState, number: number, at: number, ms: number): Hop {
   const def = FLOWS[flowId].hops[index]
   const app = APPS[def.app]
@@ -520,7 +523,7 @@ export function resendQueued(state: HubState, eventId: string, index: number, at
   return updateEvent(state, eventId, (event) => {
     const old = event.hops[index]
     if (old?.status !== 'queued') return event
-    const next = decideHop(event.flow, index, event.sample, state, event.number, at, msFor(event.number, index))
+    const next = decideHop(event.flow, index, event.sample, state, event.number, event.at, msFor(event.number, index))
     if (next.status !== 'sent') return withHop(event, index, next)
     const note = `Sent at ${time(at)} after ${APPS[old.app].name} was reconnected`
     return withHop(event, index, { ...next, code: old.code, resolved: { at, from: 'queued', note } })
@@ -530,7 +533,7 @@ export function resendQueued(state: HubState, eventId: string, index: number, at
 export function addPhoneAndResend(state: HubState, eventId: string, index: number, phone: string, at: number): HubState {
   return updateEvent(state, eventId, (event) => {
     const sample = { ...event.sample, phone }
-    const next = decideHop(event.flow, index, sample, state, event.number, at, msFor(event.number, index))
+    const next = decideHop(event.flow, index, sample, state, event.number, event.at, msFor(event.number, index))
     if (next.status !== 'sent') return event
     const note = `Resent at ${time(at)} to ${maskPhone(phone)} after a mobile number was added`
     return withHop({ ...event, sample }, index, { ...next, code: 'missing-phone', resolved: { at, from: 'failed', note } })
@@ -563,7 +566,7 @@ export function retryMapping(state: HubState, mappingId: MappingId, at: number):
   const events = state.events.map((event) => {
     const hops = event.hops.map((hop, index) => {
       if (hop.status !== 'failed' || hop.code !== 'missing-field' || FLOWS[event.flow].hops[index].mapping !== mappingId) return hop
-      const next = decideHop(event.flow, index, event.sample, state, event.number, at, msFor(event.number, index))
+      const next = decideHop(event.flow, index, event.sample, state, event.number, event.at, msFor(event.number, index))
       if (next.status !== 'sent') return hop
       sent += 1
       return { ...next, code: hop.code, resolved: { at, from: 'failed' as const, note: `Resent at ${time(at)} after the mapping was fixed` } }
