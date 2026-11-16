@@ -301,10 +301,6 @@ export default function ReceptionistPanel({ open, page, fullScreen, onClose }: P
             {DICTATION_PROBLEMS[dictation.problem]}
           </p>
         )}
-        <p className="text-[0.7rem] leading-snug text-mist-400">
-          AI can make mistakes. Your messages go to Cloudflare’s AI service to write each reply and aren’t kept. Please
-          don’t share passwords or card details.
-        </p>
       </footer>
     </section>
   )

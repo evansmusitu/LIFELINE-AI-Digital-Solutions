@@ -236,7 +236,8 @@ export async function handleReceptionist(
     headers: {
       ...BASE_HEADERS,
       'content-type': 'application/x-ndjson; charset=utf-8',
-      'x-receptionist-model': model,
+      // Which model answered, for comparing models on Previews. Production doesn't reveal it.
+      ...(env.ALLOW_MODEL_CHOICE === 'true' ? { 'x-receptionist-model': model } : {}),
     },
   })
 }
