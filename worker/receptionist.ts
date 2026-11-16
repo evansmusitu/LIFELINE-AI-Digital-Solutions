@@ -32,6 +32,18 @@ export const LIMITS_PER = {
   network: { minute: 30, day: 150 },
 } as const
 
+/**
+ * AI replies a day for the whole site (AI_REPLIES_PER_DAY), so it stays inside the account's free
+ * Workers AI allowance even if other Workers share it or the account is on the Workers Paid plan,
+ * where use past the allowance is billed. Past it, visitors get saved answers until midnight UTC.
+ */
+export function aiRepliesPerDay(env: Env): number {
+  const n = Number(env.AI_REPLIES_PER_DAY)
+  return Number.isInteger(n) && n >= 0 ? n : 0
+}
+/** Far above real traffic. Only the daily number matters; the limiter needs a per-minute one too. */
+const SITE_REPLIES_PER_MINUTE = 600
+
 /** Characters of conversation history sent to the model. Older messages are dropped first. */
 const MAX_HISTORY_CHARS = 5000
 
@@ -120,6 +132,12 @@ export async function handleReceptionist(
     }
     if (!(await limiter.getByName(`network:${network}`).allow(LIMITS_PER.network.minute, LIMITS_PER.network.day))) {
       return noReply('limited', 429)
+    }
+    // Last, so messages refused above don't use up the site's replies for the day.
+    if (!(await limiter.getByName('site:ai-replies').allow(SITE_REPLIES_PER_MINUTE, aiRepliesPerDay(env)))) {
+      if (chat.first) count('chat_started')
+      count('saved_quota')
+      return noReply('quota')
     }
   } catch (error) {
     // Without the limiter nothing protects the day's allowance, so answer from saved replies instead.

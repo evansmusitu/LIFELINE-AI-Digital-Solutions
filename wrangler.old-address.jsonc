@@ -1,0 +1,20 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	// The site's old address: lifeline-demo-studio.freelancer-d62.workers.dev, in the account the site
+	// was first built in. Every request is sent to the same page at lifeline.mftintelligence.com
+	// (worker/old-address.ts). Deployed once, by hand, to that account:
+	//   CLOUDFLARE_ACCOUNT_ID=<old account> npx wrangler deploy -c wrangler.old-address.jsonc
+	// Workers Builds is disconnected there, so nothing redeploys the full site to it.
+	"name": "lifeline-demo-studio",
+	"compatibility_date": "2026-11-15",
+	"main": "worker/old-address.ts",
+	"workers_dev": true,
+	"preview_urls": false,
+	// The same classes and migrations as the full site, so the stored data is left as it is.
+	"migrations": [
+		{ "tag": "v1", "new_sqlite_classes": ["ChatLimiter"] },
+		{ "tag": "v2", "new_sqlite_classes": ["VideoCalls"] },
+		{ "tag": "v3", "new_sqlite_classes": ["SiteStats"] },
+	],
+	// Secrets (NAPSTER_API_KEY) stay as they were, so a call running at the switch is still ended.
+}

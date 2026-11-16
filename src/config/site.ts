@@ -1,7 +1,7 @@
 /** Business details from handoff/PROJECT_BRIEF.md. Change them here and every page updates. */
 export const SITE = {
   /** Live address, no trailing slash. Used for link previews, canonical links and the sitemap. */
-  url: 'https://lifeline-demo-studio.freelancer-d62.workers.dev',
+  url: 'https://lifeline.mftintelligence.com',
   brand: 'LIFELINE AI CONCIERGE',
   /** The home page's search-result description. Each demo page uses its card summary instead. */
   description:

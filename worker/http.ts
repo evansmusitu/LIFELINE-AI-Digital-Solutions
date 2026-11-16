@@ -2,7 +2,24 @@ import { KNOWLEDGE_PATH, type Knowledge, type KnowledgeDemo } from '../src/recep
 
 /* Request and response helpers shared by the Worker's /api routes. */
 
-export const BASE_HEADERS = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }
+export const BASE_HEADERS = {
+  'cache-control': 'no-store',
+  'x-content-type-options': 'nosniff',
+  // HTTPS only on this address from now on. The static pages send the same header (public/_headers).
+  'strict-transport-security': 'max-age=31536000',
+}
+
+/**
+ * The same address over HTTPS, for a request that came in over plain HTTP, or null. The domain's
+ * "Always Use HTTPS" setting is off (it is shared with other services), so the Worker does this
+ * itself for the paths it answers, such as the /stats passcode form.
+ */
+export function httpsRedirect(request: Request): Response | null {
+  const url = new URL(request.url)
+  if (url.protocol !== 'http:' || url.hostname === 'localhost' || url.hostname === '127.0.0.1') return null
+  url.protocol = 'https:'
+  return new Response(null, { status: 301, headers: { location: url.toString(), 'cache-control': 'no-store' } })
+}
 
 export function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
