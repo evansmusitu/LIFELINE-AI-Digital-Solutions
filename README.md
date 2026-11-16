@@ -124,12 +124,15 @@ ends, what was said is added to the chat, so it goes with the "Continue on Whats
   creates the call. The Napster API key is the Worker secret `NAPSTER_API_KEY` and never reaches the browser. The
   call screen and its SDK (`src/receptionist/video/`) are a separate 53 KB download, fetched only when a call is
   opened.
-- **Limits** (`vars` in `wrangler.jsonc`): calls end after 3 minutes, Tari is told to wrap up 30 seconds before,
-  and the Worker ends any call still running 30 seconds after that. 20 calls a day in total, 2 per visitor and 6 per
-  network, and at most 5 at once. Calls stop for good once $40 has been spent (`VIDEO_BUDGET_USD`).
+- **Limits** (`vars` in `wrangler.jsonc`): calls end after 175 seconds, so a full call is 3 billed minutes (Napster
+  bills each started minute). Tari is told to wrap up 30 seconds before, and the Worker ends any call still running
+  30 seconds after the limit, retrying until Napster confirms it has ended. 20 calls a day in total, 2 per visitor
+  and 6 per network (on Previews too, since their links are public), and at most 5 at once. Calls stop for good
+  once $40 has been spent (`VIDEO_BUDGET_USD`).
 - **Spending** is counted from Napster's own session records, so it includes the live site, every Preview and any
-  tests. A call that hasn't been billed yet counts as its longest possible cost ($0.20 at $0.0583 a minute). Set
-  `VIDEO_BUDGET_USD` to `"0"` to switch calls off.
+  tests. A call that hasn't been billed yet counts as its longest possible cost (4 billed minutes, $0.23), or more
+  if it has somehow been running longer. That allows at least 171 calls in the $40. Set `VIDEO_BUDGET_USD` to
+  `"0"` to switch calls off.
 - **Agents.** The live site and Previews use separate Napster agents (`NAPSTER_AGENT_ID`), so testing new
   instructions on a Preview never changes the live site. `scripts/napster-setup.mjs` creates or updates both agents
   and the `show_demo` tool: `NAPSTER_API_KEY=... node scripts/napster-setup.mjs`.

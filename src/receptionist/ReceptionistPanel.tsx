@@ -198,7 +198,7 @@ export default function ReceptionistPanel({ open, page, fullScreen, onClose }: P
       tabIndex={-1}
       className={PANEL_FRAME}
     >
-      <header className="flex items-center gap-3 border-b border-white/10 bg-ink-900 px-4 py-3">
+      <header className="flex items-center gap-2 border-b border-white/10 bg-ink-900 px-3 py-3 sm:gap-3 sm:px-4">
         <span className="relative grid size-11 shrink-0 place-items-center rounded-full bg-brand-gradient text-ink-950" aria-hidden="true">
           <Sparkles className="size-5" />
           <span className="absolute right-0 bottom-0 size-3 rounded-full border-2 border-ink-900 bg-emerald-400" />
