@@ -48,6 +48,7 @@ const ENDINGS = {
   limit: 'That’s the end of the call. Thanks for talking with me!',
   hangup: 'Call ended.',
   dropped: 'The call ended. The connection may have dropped.',
+  idle: 'The call ended because it went quiet.',
   closed: 'Call ended.',
 } as const
 type Ending = keyof typeof ENDINGS
@@ -102,6 +103,8 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
   const transcript = useRef(new Transcript())
   const shared = useRef<DemoMeta[]>([])
   const finished = useRef(true)
+  /** True while the SDK's "still there?" countdown is showing, so a call it ends is called quiet, not dropped. */
+  const inactive = useRef(false)
   const phaseRef = useRef<Phase>('intro')
 
   const go = (next: Phase) => {
@@ -198,6 +201,7 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
         // Every demo Tari names gets its link, whether or not she called show_demo.
         demosMentioned(line).forEach(share)
       }
+      inactive.current = false
       setIdle(false)
     } else if (event.kind === 'tool' && event.name === 'show_demo') {
       const { demo, output } = showDemo(event.args)
@@ -207,6 +211,7 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
         data: { call_id: event.callId, output },
       })
     } else if (event.kind === 'idle') {
+      inactive.current = true
       setIdle(true)
     } else if (event.kind === 'ended') {
       finish('dropped')
@@ -221,6 +226,7 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
     unavailable.current = null
     startedAt.current = null
     wrapped.current = false
+    inactive.current = false
     transcript.current = new Transcript()
     shared.current = []
     setDemos([])
@@ -273,7 +279,11 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
             setStatus(next)
             if (next === 'readyAudio' || next === 'readyVideo') goLive()
             else if (next === 'permissionDismissed') fail('mic')
-            else if (next === 'entry' && phaseRef.current === 'live') finish('dropped')
+            else if (next === 'entry' && phaseRef.current === 'live') finish(inactive.current ? 'idle' : 'dropped')
+          },
+          onInactivityStatusChange: (isInactive) => {
+            inactive.current = isInactive
+            setIdle(isInactive)
           },
           // The SDK also calls this with false while it shuts down, which isn't the call going live.
           onAvatarReady: (ready) => {
