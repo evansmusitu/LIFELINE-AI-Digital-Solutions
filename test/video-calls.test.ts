@@ -73,7 +73,6 @@ function limitsChecks() {
   check('refusal: exactly at the edge is allowed', refusal({ spent: 40 - per - 0.0001, reserved: 0, today: 0, open: 0 }, limits) === null)
   check('refusal: daily', refusal({ spent: 0, reserved: 0, today: 20, open: 0 }, limits) === 'daily')
   check('refusal: busy', refusal({ spent: 0, reserved: 0, today: 0, open: 5 }, limits) === 'busy')
-  const maxCalls = Math.floor(40 / per)
 }
 
 function eventChecks() {
