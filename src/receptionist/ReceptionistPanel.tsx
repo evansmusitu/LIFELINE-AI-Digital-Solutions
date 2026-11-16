@@ -20,6 +20,7 @@ import { usePersistentState } from '../lib/storage'
 import { cleanReply, replyParts, spokenText, suggestions, whatsappSummary, type ChatMessage } from './chat'
 import { PANEL_FRAME } from './frame'
 import { LIMITS, RECEPTIONIST_NAME } from './protocol'
+import type { ViewRequest } from './receptionist-context'
 import { canSpeak, speak, stopSpeaking, unlockSpeech, useDictation, type DictationProblem } from './speech'
 import { useReceptionistChat } from './useReceptionistChat'
 
@@ -44,10 +45,12 @@ interface Props {
   page: string
   /** True on phones, where the chat covers the whole screen and the page behind is inert. */
   fullScreen: boolean
+  /** Changes when a button asks to open on a particular screen. */
+  viewRequest: ViewRequest | null
   onClose: () => void
 }
 
-export default function ReceptionistPanel({ open, page, fullScreen, onClose }: Props) {
+export default function ReceptionistPanel({ open, page, fullScreen, viewRequest, onClose }: Props) {
   const id = useId()
   const [voiceOn, setVoiceOn] = usePersistentState('receptionist.voice', () => false)
   const voice = useRef(voiceOn)
@@ -172,6 +175,20 @@ export default function ReceptionistPanel({ open, page, fullScreen, onClose }: P
     setView('video')
   }
 
+  // A button outside the chat, such as the hero's "Video call" and "Chat", opens it on that screen.
+  const [shownRequest, setShownRequest] = useState(0)
+  if (viewRequest && viewRequest.id !== shownRequest) {
+    setShownRequest(viewRequest.id)
+    setView(viewRequest.view)
+  }
+  // Going to the video screen stops the chat's voice and dictation, as the chat's own video button does.
+  const requestedVideo = viewRequest?.view === 'video' ? viewRequest.id : 0
+  useEffect(() => {
+    if (requestedVideo === 0) return
+    stopSpeaking()
+    cancelDictation()
+  }, [requestedVideo, cancelDictation])
+
   const backToChat = useCallback(() => {
     setView('chat')
     requestAnimationFrame(() => input.current?.focus({ preventScroll: true }))
@@ -197,6 +214,8 @@ export default function ReceptionistPanel({ open, page, fullScreen, onClose }: P
       hidden={!open}
       tabIndex={-1}
       className={PANEL_FRAME}
+      // WhatsApp taps in here are counted as coming from the chat or the video call (src/lib/counts.ts).
+      data-count-source={view}
     >
       <header className="flex items-center gap-2 border-b border-white/10 bg-ink-900 px-3 py-3 sm:gap-3 sm:px-4">
         <span className="relative grid size-11 shrink-0 place-items-center rounded-full bg-brand-gradient text-ink-950" aria-hidden="true">

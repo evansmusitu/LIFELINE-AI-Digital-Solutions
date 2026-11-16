@@ -1,4 +1,5 @@
 import { SITE } from '../config/site'
+import { countEvent } from './counts'
 
 /** Builds a wa.me link to LIFELINE's number, with an optional pre-filled message. */
 export function whatsappUrl(message?: string): string {
@@ -39,6 +40,8 @@ export function enquiryMessage({ name, business, service, message }: EnquiryDeta
  * Callers should also show a plain link in case the browser blocks the new tab.
  */
 export function openWhatsApp(message: string): void {
+  // This link is never added to the page, so the tap counter (src/lib/counts.ts) doesn't see it.
+  countEvent('whatsapp_page')
   const link = document.createElement('a')
   link.href = whatsappUrl(message)
   link.target = '_blank'

@@ -1,7 +1,6 @@
-import { ArrowRight, Bot, Check, ExternalLink, FileText, MessageSquareText, PackageCheck } from 'lucide-react'
+import { ArrowRight, Bot, Check, ExternalLink, FileText, MessageSquareText } from 'lucide-react'
 import { useId, useState, type FormEvent } from 'react'
 import { Button, LinkButton, WhatsAppButton } from '../components/Button'
-import { LogoBadge } from '../components/Logo'
 import { MobileCtaBar } from '../components/MobileCtaBar'
 import { WhatsAppIcon } from '../components/WhatsAppIcon'
 import { ABOUT, PRINCIPLES, PROCESS_STEPS } from '../config/about'
@@ -12,6 +11,7 @@ import { EMAIL_ENQUIRY_URL } from '../lib/email'
 import { paths } from '../lib/router'
 import { GENERAL_ENQUIRY, demoRequestMessage, enquiryMessage, openWhatsApp, whatsappUrl } from '../lib/whatsapp'
 import { AskAiButton, ReceptionistLauncher } from '../receptionist/launchers'
+import { RECEPTIONIST_NAME } from '../receptionist/protocol'
 
 export function HomePage() {
   return (
@@ -34,13 +34,72 @@ export function HomePage() {
 
 /* Hero */
 
-/* Sample events from the demos, placed in the corners so they never cover the logo. */
+/* Sample events from the demos, floating over the photo so they never cover Tari's buttons. */
 const heroEvents = [
-  { icon: MessageSquareText, text: 'Order JR-2418 sent on WhatsApp', className: 'right-0 top-0' },
-  { icon: Bot, text: 'Lead scored Hot, 90/100', className: 'left-0 top-14' },
-  { icon: PackageCheck, text: 'Low stock reordered', className: 'right-0 bottom-14' },
-  { icon: FileText, text: 'Invoice emailed automatically', className: 'left-6 bottom-0' },
+  { icon: Bot, text: 'Lead scored Hot, 90/100', className: 'left-0 top-[7.5rem]' },
+  { icon: MessageSquareText, text: 'Order JR-2418 sent on WhatsApp', className: 'right-0 top-44' },
 ]
+
+/** Tari's photo with a "live" badge and a first line, as on the video call. */
+function TariPhoto({ className, compact }: { className?: string; compact?: boolean }) {
+  return (
+    <div className={cn('relative overflow-hidden', className)}>
+      {/* Zoomed towards his face: the photo is a wide office shot. */}
+      <img
+        src="/tari-video.jpg"
+        alt=""
+        className={cn('size-full object-cover', compact ? 'origin-[50%_6%] scale-[1.8]' : 'origin-[50%_20%] scale-[1.2]')}
+      />
+      {!compact && (
+        <span className="absolute top-2 left-2 flex items-center gap-1.5 rounded-full bg-ink-950/85 px-2 py-0.5 text-[0.7rem] font-semibold text-white">
+          <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" aria-hidden="true" />
+          Live now
+        </span>
+      )}
+      {!compact && (
+        <p className="absolute inset-x-3 bottom-3 rounded-xl bg-ink-950/85 px-3 py-2 text-sm leading-snug text-white">
+          “Hi, I’m {RECEPTIONIST_NAME}. Tell me about your business and I’ll show you what we can build.”
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** The receptionist in the hero: a big card from laptop width up, a compact one on phones and tablets. */
+function MeetTari({ compact }: { compact?: boolean }) {
+  const buttons = (
+    <div className={cn('flex gap-2', compact ? 'mt-2.5' : 'mt-4')}>
+      <AskAiButton view="video" size="sm" label="Video call" aria-label={`Video call with ${RECEPTIONIST_NAME}`} className="flex-1" />
+      <AskAiButton view="chat" variant="secondary" size="sm" label="Chat" aria-label={`Chat with ${RECEPTIONIST_NAME}`} className="flex-1" />
+    </div>
+  )
+  if (compact) {
+    // On phones the buttons take the card's full width under the photo; from tablet width they sit beside it.
+    return (
+      <div className="card-glow mt-8 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 rounded-2xl p-3 lg:hidden">
+        <TariPhoto compact className="size-20 rounded-xl sm:row-span-2 sm:h-24 sm:w-28" />
+        <div className="sm:self-end">
+          <p className="flex items-center gap-1.5 font-display text-sm font-bold text-white">
+            <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-emerald-400" aria-hidden="true" />
+            Meet {RECEPTIONIST_NAME}, our AI receptionist
+          </p>
+          <p className="text-xs text-mist-300">Ask anything about your business, by chat or video call. Free.</p>
+        </div>
+        <div className="col-span-2 sm:col-span-1 sm:col-start-2 sm:self-start">{buttons}</div>
+      </div>
+    )
+  }
+  return (
+    <div className="card-glow absolute top-1/2 left-1/2 w-[19rem] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl">
+      <TariPhoto className="aspect-[4/3.4] w-full" />
+      <div className="p-4">
+        <p className="font-display text-lg font-bold text-white">Meet {RECEPTIONIST_NAME}</p>
+        <p className="text-sm text-mist-300">Our AI receptionist answers by chat or face-to-face video call.</p>
+        {buttons}
+      </div>
+    </div>
+  )
+}
 
 function Hero() {
   return (
@@ -70,9 +129,9 @@ function Hero() {
               Explore the demos
               <ArrowRight className="size-4" aria-hidden="true" />
             </LinkButton>
-            <AskAiButton variant="secondary" size="lg" label="Ask our AI receptionist" />
             <WhatsAppButton variant="secondary" size="lg" message={GENERAL_ENQUIRY} label="Chat on WhatsApp" />
           </div>
+          <MeetTari compact />
           <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-mist-300">
             {['No sign-up needed', 'Works on any phone', 'Sample data only'].map((item) => (
               <li key={item} className="flex items-center gap-2">
@@ -83,13 +142,12 @@ function Hero() {
           </ul>
         </div>
 
-        <div className="relative hidden h-[24rem] w-[31rem] justify-self-center lg:block" aria-hidden="true">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-            <LogoBadge size={240} />
-          </div>
+        <div className="relative hidden h-[34rem] w-[31rem] justify-self-center lg:block">
+          <MeetTari />
           {heroEvents.map(({ icon: Icon, text, className }) => (
             <div
               key={text}
+              aria-hidden="true"
               className={cn(
                 'absolute flex items-center gap-2 rounded-full border border-white/10 bg-ink-850/95 py-2 pr-4 pl-2 text-sm font-medium whitespace-nowrap text-mist-100 shadow-[0_8px_28px_rgb(0_0_0/0.45)]',
                 className,
@@ -553,7 +611,14 @@ function EnquiryForm() {
         {sentUrl && (
           <p role="status" className="rounded-xl border border-brand-cyan/30 bg-brand-cyan/5 px-4 py-3 text-sm text-mist-100">
             WhatsApp should now be open with your message. If it didn’t open,{' '}
-            <a href={sentUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-cyan underline">
+            {/* data-count-skip: sending the form already counted this WhatsApp tap. */}
+            <a
+              href={sentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-count-skip
+              className="font-semibold text-brand-cyan underline"
+            >
               open WhatsApp here
             </a>
             .

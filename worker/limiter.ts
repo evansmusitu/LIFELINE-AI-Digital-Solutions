@@ -1,7 +1,7 @@
 import { DurableObject } from 'cloudflare:workers'
 
 /** One UTC day as YYYY-MM-DD, matching when Cloudflare resets the free Workers AI allowance. */
-function utcDay(now: number): string {
+export function utcDay(now: number): string {
   return new Date(now).toISOString().slice(0, 10)
 }
 

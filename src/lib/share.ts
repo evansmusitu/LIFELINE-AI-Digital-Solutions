@@ -1,4 +1,5 @@
 import { SITE } from '../config/site'
+import { countEvent } from './counts'
 import { paths } from './router'
 
 /*
@@ -18,7 +19,7 @@ export function demoShareUrl(demo: SharedDemo): string {
 
 /** Text that goes with the link. The link goes last, so WhatsApp shows its preview card. */
 export function demoShareText(demo: SharedDemo): string {
-  return `Have a look at this live demo from ${SITE.brand}: ${demo.title}. You can try it on your phone, no sign-up needed.`
+  return `Have a look at this live demo from ${SITE.brand}: ${demo.title}. You can try it on your phone, no sign-up needed, and talk to their AI receptionist by chat or video call.`
 }
 
 /** Opens WhatsApp so the visitor can pick any chat or group. No phone number, unlike the enquiry links. */
@@ -40,6 +41,7 @@ export function canUseShareSheet(demo: SharedDemo): boolean {
 export async function openShareSheet(demo: SharedDemo): Promise<'shared' | 'closed' | 'failed'> {
   try {
     await navigator.share(shareData(demo))
+    countEvent('share_sheet')
     return 'shared'
   } catch (error) {
     return error instanceof DOMException && error.name === 'AbortError' ? 'closed' : 'failed'
@@ -50,6 +52,7 @@ export async function openShareSheet(demo: SharedDemo): Promise<'shared' | 'clos
 export async function copyDemoLink(demo: SharedDemo): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(demoShareUrl(demo))
+    countEvent('share_copy')
     return true
   } catch {
     return false

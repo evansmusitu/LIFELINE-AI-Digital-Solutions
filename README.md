@@ -17,18 +17,26 @@ npm run dev       # local development server
 npm run build     # type-check and build the static site into dist/
 npm run preview   # serve the built site locally
 npm run lint      # oxlint
+npm test          # logic tests for the receptionist, video calls and totals (Vitest)
 npm run cf-typegen  # regenerate worker/worker-configuration.d.ts after changing wrangler.jsonc
+npm run stats-passcode  # make a new passcode for the private /stats page
 ```
 
 Every pull request and every merge into `main` runs the **Check** workflow (`.github/workflows/check.yml`): a
-clean `npm ci`, `npm run lint` and `npm run build`, on the Node version in `.nvmrc`. It also checks that the Worker
-types match `wrangler.jsonc` and that the Worker bundles (`wrangler deploy --dry-run`). Its pass or fail mark shows on
+clean `npm ci`, `npm run lint`, `npm test` and `npm run build`, on the Node version in `.nvmrc`. It also checks that
+the Worker types match `wrangler.jsonc` and that the Worker bundles (`wrangler deploy --dry-run`).
+
+The tests in `test/` cover the parts where a mistake costs money or loses customers: the video call limits and the
+$40 budget, the receptionist's message limits, request checks, saved answers, the chat and call helpers, and the
+daily totals with their private page. They
+run the Worker code in Node with `cloudflare:workers` replaced by a stub (`vitest.config.ts`), and the Napster API
+and Workers AI replaced by fakes. Vitest doesn't type-check them. Its pass or fail mark shows on
 the pull request.
 
 ## Deploy
 
 The site is hosted on Cloudflare Workers: the static build in `dist/`, plus a small Worker script that answers
-`/api/*` only. Workers Builds builds it from this GitHub repository, and the hosting settings are in `wrangler.jsonc`.
+`/api/*` and `/stats` only. Workers Builds builds it from this GitHub repository, and the hosting settings are in `wrangler.jsonc`.
 Static files are free and unlimited on Cloudflare. The Worker uses the Workers Free plan allowance (100,000 requests a
 day).
 
@@ -67,12 +75,13 @@ Another static host works if it serves `demos/<slug>.html` at `/demos/<slug>` an
 
 | File | Size | Used for |
 |---|---|---|
-| `src/assets/logo-badge.jpg` | 480 px, 34 KB | Full badge on the home page |
 | `src/assets/logo-mark.png` | 128 px, 15 KB | The "L" icon alone on a navy disc: header, footer, "Powered by" bars, browser tab icon |
-| `public/og-image.jpg` | 1200 × 630, 90 KB | Link preview on WhatsApp, Facebook, LinkedIn and X |
+| `public/og-image.jpg` | 1200 × 630, 91 KB | Link preview on WhatsApp, Facebook, LinkedIn and X: Tari's photo, the "L" icon and the name |
 
 At small sizes the site uses only the "L" icon, with the name in live text, because the thin "AI CONCIERGE"
-lettering is unreadable below about 120 px. If the logo changes, regenerate all three copies.
+lettering is unreadable below about 120 px. If the logo changes, regenerate both copies. When `og-image.jpg`
+changes, raise the `?v=` number on its `og:image` tag in `index.html`, so apps that cached the old image fetch the
+new one.
 
 If the site moves to another address, change `url` in `src/config/site.ts`. Link previews, canonical links and the
 sitemap all use it.
@@ -107,7 +116,9 @@ their questions filled in.
 - **Voice.** "Read replies aloud" uses the phone's built-in voice. Voice typing uses the browser's speech service and
   only shows where the browser supports it (Chrome, Edge, Safari).
 - **Privacy.** Messages go to Workers AI to write each reply. The production model has zero data retention, and
-  Cloudflare doesn't train on customer content. The Worker doesn't log message text. The conversation is saved only in the visitor's browser.
+  Cloudflare doesn't train on customer content. The Worker doesn't log message text. Video calls are different:
+  Napster keeps each call's transcript in its session records until the session is deleted, and the footer says
+  so. The conversation is also saved in the visitor's browser.
 - **Previews.** Previews accept a `model` field in the request (`ALLOW_MODEL_CHOICE`), to compare the models listed
   in `worker/receptionist.ts`. Production ignores it.
 
@@ -140,6 +151,30 @@ ends, what was said is added to the chat, so it goes with the "Continue on Whats
   a v2 avatar, for when Napster switches v2 on for the account. To change the face or voice, edit `COMPANION_ID` and
   `VOICE` in the setup script, run it, and replace `public/tari-video.jpg`.
 
+## Totals
+
+The site counts daily totals, and nothing about who did what: no cookies, and no IDs, addresses or message text are
+kept with them. It counts chats started, AI replies, saved answers (by reason), video calls started, calls turned
+away (by reason), WhatsApp taps (in the chat, on a video call, or on the pages) and demo shares (to WhatsApp, from
+the phone's share menu, or by copying the link). The footer tells visitors.
+
+- **How it works.** The Worker counts chats and calls itself, and only for requests within the chat and call limits,
+  so a script can't push them up for free. An AI reply counts once it has been sent in full. The browser counts
+  WhatsApp taps and shares (`src/lib/counts.ts`) by posting the event's name to `/api/event`, which takes at most 10
+  a minute and 100 a day from one network. Those are a guide rather than exact: a script spread over many networks
+  could add to them. The `SiteStats` Durable Object (`worker/stats.ts`) keeps one entry per UTC day, for 400 days. A
+  count is added after the reply has gone, and a failed count never breaks the reply.
+- **Cost: $0.** Each count is one Durable Object request, one row read and one row written, plus a few more once a
+  day to delete the oldest day. A tap or share also goes through the per-network limit, which adds about the same
+  again. The Workers Free plan includes 100,000 Durable Object requests and 100,000 rows written a day, shared with
+  the message limiter and video calls. Requests refused by a limit aren't counted, so they cost what they did before.
+- **Reading them.** Open `/stats` on the live site and enter the passcode. The page shows video call spending, the
+  last 14 days and every total since counting began. Previews keep their own totals. Passcode tries, right or wrong,
+  are limited to 10 a minute and 60 a day per network.
+- **The passcode.** Only its SHA-256 is in `wrangler.jsonc` (`STATS_PASSCODE_SHA256`), which is safe in a public
+  repository because the passcode is 20 random characters. To change it, run `npm run stats-passcode`, put the new
+  hash in both `vars` and `previews.vars`, and merge. Set it to `""` to remove the page.
+
 ## Where things live
 
 | What | Where |
@@ -150,6 +185,7 @@ ends, what was said is added to the chat, so it goes with the "Continue on Whats
 | AI receptionist: chat panel, saved answers, voice | `src/receptionist/` |
 | AI receptionist: Worker, instructions and facts, rate limits | `worker/`, `wrangler.jsonc` |
 | Video calls: call screen, limits, Napster agents and tool | `src/receptionist/video/`, `worker/video*.ts`, `worker/napster.ts`, `scripts/napster-setup.mjs` |
+| Daily totals: what is counted, the tap counter, the /stats page | `src/lib/count-events.ts`, `src/lib/counts.ts`, `worker/stats*.ts` |
 | Brand colours (confirmed) and fonts | `@theme` in `src/index.css` |
 | Demo list, card text, "Try this" tips, "How we'd build this" timelines | `src/demos/registry.ts` |
 | Studio pages (home, demo page frame, 404) | `src/pages/` |

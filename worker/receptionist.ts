@@ -2,6 +2,7 @@ import { LIMITS, type ChatTurn, type NoReply, type ReceptionistRequest } from '.
 import { BASE_HEADERS, isRecord, json, loadKnowledge, pageName, readBody, rejectRequest, requestNetwork, visitorId } from './http'
 import type { ChatLimiter } from './limiter'
 import { systemPrompt } from './prompt'
+import type { Count } from './stats'
 import { replyStream } from './stream'
 
 /*
@@ -39,8 +40,13 @@ function noReply(reason: NoReply['reason'], status = 200): Response {
   return json(body, status)
 }
 
+export interface ParsedChat extends ReceptionistRequest {
+  /** The chat's first message: nothing before it but the greeting, which the browser doesn't send. */
+  first: boolean
+}
+
 /** Checks the request and keeps the latest messages, starting with a visitor message and alternating roles. */
-export function parseRequest(raw: string): ReceptionistRequest | null {
+export function parseRequest(raw: string): ParsedChat | null {
   let data: unknown
   try {
     data = JSON.parse(raw)
@@ -75,11 +81,11 @@ export function parseRequest(raw: string): ReceptionistRequest | null {
   const page = pageName(data.page)
   const visitor = visitorId(data.visitor)
   const model = typeof data.model === 'string' ? data.model : undefined
-  return { messages: recent, page, visitor, model }
+  return { messages: recent, page, visitor, model, first: turns.length === 1 }
 }
 
 /** Workers AI error codes: 4006 = daily free allocation used up, 3040 = out of capacity. */
-export function failureReason(error: unknown): NoReply['reason'] {
+export function failureReason(error: unknown): Exclude<NoReply['reason'], 'limited'> {
   const message = error instanceof Error ? `${error.name} ${error.message}` : String(error)
   if (/\b4006\b|daily free allocation|neurons/i.test(message)) return 'quota'
   if (/\b3040\b|capacity|\b429\b|too many/i.test(message)) return 'busy'
@@ -92,6 +98,7 @@ export async function handleReceptionist(
   request: Request,
   env: Env,
   limiter: DurableObjectNamespace<ChatLimiter>,
+  count: Count,
 ): Promise<Response> {
   // POST from this site's own pages only, so other websites can't spend its allowance.
   const rejected = rejectRequest(request)
@@ -103,6 +110,7 @@ export async function handleReceptionist(
   const chat = parseRequest(raw)
   if (!chat) return json({ error: 'bad_request' }, 400)
 
+  // Counted only once a message is within the limits, so a script can't push the totals up for free.
   const network = requestNetwork(request)
   try {
     // Visitor first, so a visitor over their own limit doesn't use up their network's.
@@ -116,8 +124,11 @@ export async function handleReceptionist(
   } catch (error) {
     // Without the limiter nothing protects the day's allowance, so answer from saved replies instead.
     console.warn('receptionist: rate limit check failed', error instanceof Error ? error.message : String(error))
+    if (chat.first) count('chat_started')
+    count('saved_busy')
     return noReply('busy')
   }
+  if (chat.first) count('chat_started')
 
   const knowledge = await loadKnowledge(env, url.origin)
   const page = knowledge.demos.some((d) => d.slug === chat.page) ? chat.page : 'home'
@@ -138,10 +149,12 @@ export async function handleReceptionist(
   } catch (error) {
     const reason = failureReason(error)
     console.warn('receptionist: no AI reply', reason, error instanceof Error ? error.message : String(error))
+    count(`saved_${reason}`)
     return noReply(reason)
   }
 
-  return new Response(upstream.pipeThrough(replyStream()), {
+  // Counted once the whole reply has been sent. One that fails part-way isn't an AI reply.
+  return new Response(upstream.pipeThrough(replyStream(() => count('ai_reply'))), {
     headers: {
       ...BASE_HEADERS,
       'content-type': 'application/x-ndjson; charset=utf-8',

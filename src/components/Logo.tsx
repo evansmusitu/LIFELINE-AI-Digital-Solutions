@@ -1,12 +1,10 @@
 import { cn } from '../lib/cn'
-import badgeSrc from '../assets/logo-badge.jpg'
 import markSrc from '../assets/logo-mark.png'
 
 /*
- * Both images are made from the master logo in public/logo.png (brief, section 3):
- * - logo-badge.jpg: the full badge, resized to 480px (34 KB instead of 474 KB).
- * - logo-mark.png: the "L" icon alone on a navy disc, 128px. Below about 120px wide only
- *   the "L" is used, because the thin "AI CONCIERGE" lettering stops being readable.
+ * logo-mark.png is made from the master logo in public/logo.png (brief, section 3): the "L" icon
+ * alone on a navy disc, 128px. At small sizes only the "L" is used, because the thin
+ * "AI CONCIERGE" lettering stops being readable below about 120px.
  */
 
 /** "L" icon for small sizes (header, footer, "Powered by" bars). Decorative: the name is always in live text nearby. */
@@ -20,29 +18,6 @@ export function LogoMark({ size = 40, className }: { size?: number; className?: 
       decoding="async"
       className={cn('shrink-0 rounded-full', className)}
     />
-  )
-}
-
-/** Full badge for sizes of 120px and up. */
-export function LogoBadge({ size = 200, className }: { size?: number; className?: string }) {
-  return (
-    <div className={cn('relative rounded-full', className)} style={{ width: size, height: size }}>
-      {/* A radial gradient instead of a blur filter: same glow, far cheaper on low-end phones. */}
-      <div
-        aria-hidden="true"
-        className="absolute -inset-[18%] rounded-full bg-[radial-gradient(circle,rgb(0_212_255/0.32)_0%,rgb(139_92_246/0.18)_45%,transparent_70%)]"
-      />
-      {/* Lazy, so phones skip the download while the home hero hides the badge on small screens. */}
-      <img
-        src={badgeSrc}
-        alt=""
-        width={size}
-        height={size}
-        loading="lazy"
-        decoding="async"
-        className="relative rounded-full"
-      />
-    </div>
   )
 }
 

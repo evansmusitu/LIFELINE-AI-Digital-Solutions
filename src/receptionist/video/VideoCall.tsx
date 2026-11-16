@@ -433,7 +433,8 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
             {RECEPTIONIST_NAME} can show you the demos that fit.
           </p>
           <p className="mt-2 text-xs text-mist-400">
-            Your browser will ask to use your microphone. A call uses about as much data as a normal video call.
+            Your browser will ask to use your microphone. A call uses about as much data as a normal video call, and our
+            video call provider keeps a transcript of it.
           </p>
           {problem && (
             <p role="alert" className="mt-3 rounded-xl border border-[#ff8fa3]/40 bg-[#ff8fa3]/10 px-3 py-2 text-sm text-mist-100">

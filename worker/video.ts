@@ -1,7 +1,8 @@
-import { RECEPTIONIST_NAME, VIDEO_START_PATH, type VideoStartResponse } from '../src/receptionist/protocol'
+import { RECEPTIONIST_NAME, VIDEO_START_PATH, type VideoStartResponse, type VideoUnavailableReason } from '../src/receptionist/protocol'
 import { json, loadKnowledge, pageName, parseObject, readBody, rejectRequest, requestNetwork, visitorId } from './http'
 import type { ChatLimiter } from './limiter'
 import { videoOpening, videoPrompt } from './prompt'
+import type { Count } from './stats'
 import { videoLimits, type VideoCalls } from './video-calls'
 
 /*
@@ -16,10 +17,14 @@ interface Namespaces {
   limiter: DurableObjectNamespace<ChatLimiter>
 }
 
-const unavailable = (reason: Extract<VideoStartResponse, { type: 'unavailable' }>['reason']) =>
-  json({ type: 'unavailable', reason } satisfies VideoStartResponse)
+const unavailable = (reason: VideoUnavailableReason) => json({ type: 'unavailable', reason } satisfies VideoStartResponse)
 
-export async function handleVideo(request: Request, env: Env, path: string, ns: Namespaces): Promise<Response> {
+export async function handleVideo(request: Request, env: Env, path: string, ns: Namespaces, count: Count): Promise<Response> {
+  // Refusals are counted only past the flood guard below, so a script can't push the totals up for free.
+  const refused = (reason: VideoUnavailableReason) => {
+    count(`video_refused_${reason}`)
+    return unavailable(reason)
+  }
   const rejected = rejectRequest(request)
   if (rejected) return rejected
   const raw = await readBody(request, 2000)
@@ -50,18 +55,19 @@ export async function handleVideo(request: Request, env: Env, path: string, ns: 
   const page = demo ? demo.slug : 'home'
   const { maxSeconds } = videoLimits(env)
   try {
-    return json(
-      await calls.start({
-        visitor,
-        network,
-        page,
-        pageTitle: demo ? `${demo.title} demo` : 'Home page',
-        instructions: videoPrompt(knowledge, maxSeconds),
-        opening: videoOpening(knowledge, page, maxSeconds),
-      }),
-    )
+    const started = await calls.start({
+      visitor,
+      network,
+      page,
+      pageTitle: demo ? `${demo.title} demo` : 'Home page',
+      instructions: videoPrompt(knowledge, maxSeconds),
+      opening: videoOpening(knowledge, page, maxSeconds),
+    })
+    if (started.type === 'unavailable') return refused(started.reason)
+    count('video_started')
+    return json(started)
   } catch (error) {
     console.warn(`video: ${RECEPTIONIST_NAME} call start failed`, error instanceof Error ? error.message : String(error))
-    return unavailable('error')
+    return refused('error')
   }
 }
