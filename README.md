@@ -2,7 +2,8 @@
 
 Interactive demos of the systems LIFELINE AI CONCIERGE builds, made to turn visitors into WhatsApp enquiries.
 Every demo runs in the browser on sample data. There is no login or real payment. The only server code is the AI
-receptionist, a small Cloudflare Worker in `worker/` (see [AI receptionist](#ai-receptionist)).
+receptionist and its video calls, a small Cloudflare Worker in `worker/` (see [AI receptionist](#ai-receptionist)
+and [Video calls](#video-calls)).
 
 The plan, brand rules and data policy are in [`handoff/PROJECT_BRIEF.md`](handoff/PROJECT_BRIEF.md).
 
@@ -110,6 +111,35 @@ their questions filled in.
 - **Previews.** Previews accept a `model` field in the request (`ALLOW_MODEL_CHOICE`), to compare the models listed
   in `worker/receptionist.ts`. Production ignores it.
 
+## Video calls
+
+Visitors can also talk to Tari face to face: the video button in the chat header, or "Prefer to talk? Video call
+Tari" before the first message. Tari is a live talking avatar (Napster Omniagent API) that listens, answers out
+loud, shows captions, and puts a link on screen for each demo she recommends (the `show_demo` tool). When the call
+ends, what was said is added to the chat, so it goes with the "Continue on WhatsApp" message.
+
+- **How it works.** After the visitor allows the microphone, the browser asks `/api/video/start` for a one-call
+  token (`worker/video.ts`). The `VideoCalls` Durable Object (`worker/video-calls.ts`) checks the limits, updates the
+  agent's instructions when the site's facts or demos have changed (`videoPrompt` in `worker/prompt.ts`), and
+  creates the call. The Napster API key is the Worker secret `NAPSTER_API_KEY` and never reaches the browser. The
+  call screen and its SDK (`src/receptionist/video/`) are a separate 53 KB download, fetched only when a call is
+  opened.
+- **Limits** (`vars` in `wrangler.jsonc`): calls end after 175 seconds, so a full call is 3 billed minutes (Napster
+  bills each started minute). Tari is told to wrap up 30 seconds before, and the Worker ends any call still running
+  30 seconds after the limit, retrying until Napster confirms it has ended. 20 calls a day in total, 2 per visitor
+  and 6 per network (on Previews too, since their links are public), and at most 5 at once. Calls stop for good
+  once $40 has been spent (`VIDEO_BUDGET_USD`).
+- **Spending** is counted from Napster's own session records, so it includes the live site, every Preview and any
+  tests. A call that hasn't been billed yet counts as its longest possible cost (4 billed minutes, $0.23), or more
+  if it has somehow been running longer. That allows at least 171 calls in the $40. Set `VIDEO_BUDGET_USD` to
+  `"0"` to switch calls off.
+- **Agents.** The live site and Previews use separate Napster agents (`NAPSTER_AGENT_ID`), so testing new
+  instructions on a Preview never changes the live site. `scripts/napster-setup.mjs` creates or updates both agents
+  and the `show_demo` tool: `NAPSTER_API_KEY=... node scripts/napster-setup.mjs`.
+- **The avatar** is Kai Mercer from Napster's stock catalogue, presented as Tari, with the `cedar` voice. He also has
+  a v2 avatar, for when Napster switches v2 on for the account. To change the face or voice, edit `COMPANION_ID` and
+  `VOICE` in the setup script, run it, and replace `public/tari-video.jpg`.
+
 ## Where things live
 
 | What | Where |
@@ -119,6 +149,7 @@ their questions filled in.
 | About text, "How we work" principles and the 3-step process (also used by the AI receptionist) | `src/config/about.ts` |
 | AI receptionist: chat panel, saved answers, voice | `src/receptionist/` |
 | AI receptionist: Worker, instructions and facts, rate limits | `worker/`, `wrangler.jsonc` |
+| Video calls: call screen, limits, Napster agents and tool | `src/receptionist/video/`, `worker/video*.ts`, `worker/napster.ts`, `scripts/napster-setup.mjs` |
 | Brand colours (confirmed) and fonts | `@theme` in `src/index.css` |
 | Demo list, card text, "Try this" tips, "How we'd build this" timelines | `src/demos/registry.ts` |
 | Studio pages (home, demo page frame, 404) | `src/pages/` |

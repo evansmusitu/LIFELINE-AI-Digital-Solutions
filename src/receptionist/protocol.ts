@@ -50,6 +50,32 @@ export interface NoReply {
   reason: 'quota' | 'limited' | 'busy' | 'error'
 }
 
+/* Video calls with Tari (worker/video.ts). */
+
+export const VIDEO_START_PATH = '/api/video/start'
+export const VIDEO_END_PATH = '/api/video/end'
+
+export interface VideoStartRequest {
+  page: string
+  visitor: string
+}
+
+/**
+ * Why a call can't start. daily: the day's calls are used up. budget: the total spending limit is
+ * reached. busy: too many calls at once. visitor: this visitor (or network) has had today's calls.
+ * off: video calls are switched off. error: anything else.
+ */
+export type VideoUnavailableReason = 'daily' | 'budget' | 'busy' | 'visitor' | 'off' | 'error'
+
+export type VideoStartResponse =
+  | { type: 'ok'; token: string; callId: string; endKey: string; maxSeconds: number }
+  | { type: 'unavailable'; reason: VideoUnavailableReason }
+
+export interface VideoEndRequest {
+  callId: string
+  endKey: string
+}
+
 export interface KnowledgeDemo {
   slug: string
   title: string

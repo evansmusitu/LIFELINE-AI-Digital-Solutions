@@ -10,6 +10,8 @@ export interface ChatMessage {
   text: string
   /** Replies only: "ai" came from Workers AI, "saved" from src/receptionist/fallback.ts. */
   source?: 'ai' | 'saved'
+  /** Said on a video call, then added to the chat. */
+  fromCall?: boolean
 }
 
 export const GREETING_ID = 'greeting'
@@ -51,30 +53,53 @@ export function fallbackNote(reason: NoReply['reason'] | 'offline'): string {
   }
 }
 
-/** The conversation as the Worker expects it: visitor and AI messages only, newest last, within the size limits. */
+/**
+ * The conversation as the Worker expects it: visitor and AI messages only, newest last, within the
+ * size limits. Messages in a row from the same side (a video call's lines, for example) are joined
+ * into one turn and the joined turn is kept within the limit, as the Worker joins them too.
+ */
 export function toTurns(messages: ChatMessage[]): ChatTurn[] {
-  return messages
-    .filter((m) => m.id !== GREETING_ID && (m.role === 'user' || m.role === 'assistant'))
-    .slice(-LIMITS.historyMessages)
-    .map((m) => ({
-      role: m.role === 'user' ? 'user' : 'assistant',
-      content: m.text.slice(0, m.role === 'user' ? LIMITS.visitorChars : LIMITS.replyChars),
-    }))
+  const turns: ChatTurn[] = []
+  for (const m of messages) {
+    if (m.id === GREETING_ID || (m.role !== 'user' && m.role !== 'assistant')) continue
+    const role = m.role === 'user' ? 'user' : 'assistant'
+    const max = role === 'user' ? LIMITS.visitorChars : LIMITS.replyChars
+    const text = m.text.trim()
+    if (!text) continue
+    const last = turns[turns.length - 1]
+    if (last?.role === role) {
+      // Keep the newest words: they matter most for the next reply.
+      const joined = `${last.content}\n${text}`
+      last.content = joined.length > max ? joined.slice(joined.length - max).replace(/^\S*\s/, '') : joined
+    } else turns.push({ role, content: text.slice(0, max) })
+  }
+  return turns.slice(-LIMITS.historyMessages)
 }
 
 const truncate = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text)
 
-/** The WhatsApp message behind "Continue on WhatsApp": who they spoke to and what they asked. */
+const line = (text: string) => `- ${truncate(text.replace(/\s+/g, ' ').trim(), 160)}`
+
+/**
+ * The WhatsApp message behind "Continue on WhatsApp": who they spoke to and what they asked. From a
+ * video call, only the visitor's longer sentences go in, not "okay, thanks".
+ */
 export function whatsappSummary(messages: ChatMessage[], page: string): string {
   const title = demoTitle(page)
-  const asked = messages
-    .filter((m) => m.role === 'user')
-    .slice(-4)
-    .map((m) => `- ${truncate(m.text.replace(/\s+/g, ' ').trim(), 160)}`)
-  const intro = `Hi ${SITE.brand}, I’ve been chatting with ${RECEPTIONIST_NAME}, your AI receptionist${
+  const visitor = messages.filter((m) => m.role === 'user')
+  const typed = visitor.filter((m) => !m.fromCall).slice(-4).map((m) => line(m.text))
+  const spoken = visitor
+    .filter((m) => m.fromCall && m.text.trim().split(/\s+/).length >= 5)
+    .slice(-3)
+    .map((m) => line(m.text))
+  const called = visitor.some((m) => m.fromCall)
+  const intro = `Hi ${SITE.brand}, I’ve been ${called ? 'talking' : 'chatting'} with ${RECEPTIONIST_NAME}, your AI receptionist${
     title ? `, on the "${title}" demo` : ''
   }. I’d like to talk to the team about my business.`
-  return asked.length ? `${intro}\n\nWhat I asked:\n${asked.join('\n')}` : intro
+  const parts = [intro]
+  if (typed.length) parts.push(`What I asked:\n${typed.join('\n')}`)
+  if (spoken.length) parts.push(`On the video call I said:\n${spoken.join('\n')}`)
+  return parts.join('\n\n')
 }
 
 /** Removes the markdown a model sometimes writes despite its instructions. */

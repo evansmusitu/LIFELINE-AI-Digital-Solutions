@@ -61,7 +61,9 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
     })
   }, [page, setChat])
 
-  const visitorCount = chat.messages.filter((m) => m.role === 'user').length
+  // Lines spoken on a video call don't count towards the chat's message limit, but do count as having asked.
+  const typedCount = chat.messages.filter((m) => m.role === 'user' && !m.fromCall).length
+  const asked = chat.messages.some((m) => m.role === 'user')
 
   const send = useCallback(
     async (input: string) => {
@@ -132,6 +134,14 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
     [chat.messages, page, setChat, visitor],
   )
 
+  /** Adds what was said on a video call, so the chat and the WhatsApp summary include it. */
+  const addCallRecord = useCallback(
+    (record: ChatMessage[]) => {
+      if (record.length) setChat((current) => ({ messages: [...current.messages, ...record], page: current.page }))
+    },
+    [setChat],
+  )
+
   const restart = useCallback(() => {
     controller.current?.abort()
     controller.current = null
@@ -143,9 +153,11 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
     messages: chat.messages,
     pending,
     busy: pending !== null,
-    limitReached: visitorCount >= MAX_VISITOR_MESSAGES,
-    asked: visitorCount > 0,
+    limitReached: typedCount >= MAX_VISITOR_MESSAGES,
+    asked,
+    visitor,
     send,
+    addCallRecord,
     restart,
   }
 }

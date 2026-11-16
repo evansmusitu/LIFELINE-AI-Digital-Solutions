@@ -1,5 +1,7 @@
-import { Mic, RotateCcw, SendHorizontal, Sparkles, Square, Volume2, VolumeX, X } from 'lucide-react'
+import { MessageSquareText, Mic, RotateCcw, SendHorizontal, Sparkles, Square, Video, Volume2, VolumeX, X } from 'lucide-react'
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useId,
@@ -10,7 +12,8 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react'
-import { WhatsAppButton } from '../components/Button'
+import { Button, WhatsAppButton } from '../components/Button'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { cn } from '../lib/cn'
 import { paths } from '../lib/router'
 import { usePersistentState } from '../lib/storage'
@@ -20,6 +23,14 @@ import { LIMITS, RECEPTIONIST_NAME } from './protocol'
 import { canSpeak, speak, stopSpeaking, unlockSpeech, useDictation, type DictationProblem } from './speech'
 import { useReceptionistChat } from './useReceptionistChat'
 
+/* The video call and its SDK are a separate download, fetched when the visitor opens the call. */
+const loadVideoCall = () => import('./video/VideoCall')
+const VideoCall = lazy(loadVideoCall)
+const prefetchVideoCall = () => {
+  loadVideoCall().catch(() => {
+    // Retried when the call is opened.
+  })
+}
 
 const DICTATION_PROBLEMS: Record<DictationProblem, string> = {
   blocked: 'Microphone access is blocked for this site. You can allow it in your browser settings, or type instead.',
@@ -43,6 +54,7 @@ export default function ReceptionistPanel({ open, page, fullScreen, onClose }: P
   const isOpen = useRef(open)
   const [announcement, setAnnouncement] = useState('')
   const [draft, setDraft] = useState('')
+  const [view, setView] = useState<'chat' | 'video'>('chat')
   const input = useRef<HTMLTextAreaElement>(null)
   const log = useRef<HTMLDivElement>(null)
   const panel = useRef<HTMLElement>(null)
@@ -124,7 +136,7 @@ export default function ReceptionistPanel({ open, page, fullScreen, onClose }: P
   useLayoutEffect(() => {
     const box = log.current
     if (box) box.scrollTop = box.scrollHeight
-  }, [chat.messages.length, lastText, open])
+  }, [chat.messages.length, lastText, open, view])
 
   // The message box grows with the text, up to about five lines.
   useLayoutEffect(() => {
@@ -154,7 +166,19 @@ export default function ReceptionistPanel({ open, page, fullScreen, onClose }: P
     if (fullScreen) onClose()
   }
 
+  const openVideo = () => {
+    stopSpeaking()
+    cancelDictation()
+    setView('video')
+  }
+
+  const backToChat = useCallback(() => {
+    setView('chat')
+    requestAnimationFrame(() => input.current?.focus({ preventScroll: true }))
+  }, [])
+
   const restart = () => {
+    setView('chat')
     stopSpeaking()
     cancelDictation()
     chat.restart()
@@ -174,7 +198,7 @@ export default function ReceptionistPanel({ open, page, fullScreen, onClose }: P
       tabIndex={-1}
       className={PANEL_FRAME}
     >
-      <header className="flex items-center gap-3 border-b border-white/10 bg-ink-900 px-4 py-3">
+      <header className="flex items-center gap-2 border-b border-white/10 bg-ink-900 px-3 py-3 sm:gap-3 sm:px-4">
         <span className="relative grid size-11 shrink-0 place-items-center rounded-full bg-brand-gradient text-ink-950" aria-hidden="true">
           <Sparkles className="size-5" />
           <span className="absolute right-0 bottom-0 size-3 rounded-full border-2 border-ink-900 bg-emerald-400" />
@@ -184,10 +208,19 @@ export default function ReceptionistPanel({ open, page, fullScreen, onClose }: P
             {RECEPTIONIST_NAME}
           </h2>
           <p id={`${id}-role`} className="truncate text-xs text-mist-300">
-            AI receptionist
+            {view === 'video' ? 'Video call' : 'AI receptionist'}
           </p>
         </div>
-        {canSpeak() && (
+        {view === 'chat' ? (
+          <IconButton label={`Video call with ${RECEPTIONIST_NAME}`} onClick={openVideo} onHover={prefetchVideoCall}>
+            <Video className="size-5" />
+          </IconButton>
+        ) : (
+          <IconButton label="Back to chat" onClick={backToChat}>
+            <MessageSquareText className="size-5" />
+          </IconButton>
+        )}
+        {canSpeak() && view === 'chat' && (
           <IconButton
             label="Read replies aloud"
             pressed={voiceOn}
@@ -207,101 +240,152 @@ export default function ReceptionistPanel({ open, page, fullScreen, onClose }: P
         </IconButton>
       </header>
 
-      <div ref={log} aria-label="Conversation" role="region" className="relative flex-1 space-y-3 overflow-y-auto px-4 py-4">
-        {/* One list, so the streaming bubble and the finished reply (same id) stay the same element. */}
-        {items.map(({ message, streaming }) =>
-          streaming && !message.text ? (
-            <Typing key={message.id} />
-          ) : (
-            <Bubble key={message.id} message={message} onDemoLink={onDemoLink} streaming={streaming} />
-          ),
-        )}
-      </div>
-      {/* Finished replies only, so screen readers don't read every word as it streams in. */}
-      <p className="sr-only" aria-live="polite">
-        {announcement}
-      </p>
-
-      {!chat.asked && (
-        <div className="flex flex-wrap gap-2 px-4 pb-3">
-          {suggestions(page).map((text) => (
-            <button
-              key={text}
-              type="button"
-              disabled={chat.busy || dictation.listening}
-              onClick={() => {
-                // The suggestions disappear once one is sent, so keep focus in the chat.
-                input.current?.focus({ preventScroll: true })
-                send(text)
-              }}
-              className="rounded-full border border-brand-cyan/40 bg-brand-cyan/5 px-3 py-1.5 text-left text-sm text-mist-100 transition hover:border-brand-cyan hover:bg-brand-cyan/10 disabled:opacity-50"
-            >
-              {text}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <footer className="space-y-2.5 border-t border-white/10 bg-ink-900 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        {chat.asked && (
-          <WhatsAppButton
-            size="sm"
-            message={whatsappSummary(chat.messages, page)}
-            label="Continue on WhatsApp"
-            className="w-full"
-          />
-        )}
-
-        {chat.limitReached ? (
-          <p className="rounded-xl bg-white/5 px-3 py-2 text-sm text-mist-200">
-            That’s a long chat! The team can go into more detail on WhatsApp, or start a new chat here.
-          </p>
-        ) : (
-          <form onSubmit={submit} className="flex items-end gap-2">
-            <label htmlFor={`${id}-input`} className="sr-only">
-              Message {RECEPTIONIST_NAME}
-            </label>
-            <textarea
-              id={`${id}-input`}
-              ref={input}
-              rows={1}
-              value={dictation.listening ? dictation.interim : draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={onKeyDown}
-              readOnly={dictation.listening}
-              maxLength={LIMITS.visitorChars}
-              enterKeyHint="send"
-              placeholder={dictation.listening ? 'Listening…' : 'Ask about our services or demos'}
-              className="block min-h-11 flex-1 resize-none rounded-2xl border border-white/15 bg-ink-950 px-4 py-2.5 text-[0.95rem] leading-snug text-white placeholder:text-mist-400 hover:border-white/25"
+      {view === 'video' ? (
+        <ErrorBoundary
+          fallback={() => (
+            <div role="alert" className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+              <p className="text-mist-100">The video call didn’t load. A weak connection can interrupt the download.</p>
+              <Button variant="secondary" onClick={backToChat}>
+                Back to chat
+              </Button>
+            </div>
+          )}
+        >
+          <Suspense
+            fallback={
+              <p role="status" className="grid flex-1 place-items-center text-sm text-mist-300">
+                Opening the video call…
+              </p>
+            }
+          >
+            <VideoCall
+              page={page}
+              visitor={chat.visitor}
+              active={open}
+              whatsappMessage={(call) => whatsappSummary([...chat.messages, ...call], page)}
+              onFinished={chat.addCallRecord}
+              onBack={backToChat}
+              onDemoLink={onDemoLink}
             />
-            {dictation.supported && (
-              <IconButton
-                label="Voice typing"
-                pressed={dictation.listening}
-                disabled={chat.busy}
-                onClick={dictation.listening ? dictation.stop : dictation.start}
-                className={cn('size-11 border border-white/15', dictation.listening && 'animate-pulse-ring border-brand-cyan text-brand-cyan')}
-              >
-                {dictation.listening ? <Square className="size-4" /> : <Mic className="size-5" />}
-              </IconButton>
+          </Suspense>
+        </ErrorBoundary>
+      ) : (
+        <>
+          <div ref={log} aria-label="Conversation" role="region" className="relative flex-1 space-y-3 overflow-y-auto px-4 py-4">
+            {/* One list, so the streaming bubble and the finished reply (same id) stay the same element. */}
+            {items.map(({ message, streaming }) =>
+              streaming && !message.text ? (
+                <Typing key={message.id} />
+              ) : (
+                <Bubble key={message.id} message={message} onDemoLink={onDemoLink} streaming={streaming} />
+              ),
             )}
-            <button
-              type="submit"
-              aria-label="Send"
-              disabled={!draft.trim() || chat.busy || dictation.listening}
-              className="grid size-11 shrink-0 place-items-center rounded-full bg-brand-gradient text-ink-950 transition hover:brightness-110 disabled:opacity-40"
-            >
-              <SendHorizontal className="size-5" aria-hidden="true" />
-            </button>
-          </form>
-        )}
-
-        {dictation.problem && (
-          <p role="status" className="text-xs text-[#ffb4c1]">
-            {DICTATION_PROBLEMS[dictation.problem]}
+          </div>
+          {/* Finished replies only, so screen readers don't read every word as it streams in. */}
+          <p className="sr-only" aria-live="polite">
+            {announcement}
           </p>
-        )}
-      </footer>
+
+          {!chat.asked && (
+            <button
+              type="button"
+              onClick={openVideo}
+              onPointerEnter={prefetchVideoCall}
+              onFocus={prefetchVideoCall}
+              className="mx-4 mb-3 flex items-center gap-3 rounded-2xl border border-brand-cyan/40 bg-brand-cyan/5 p-2.5 text-left transition hover:border-brand-cyan hover:bg-brand-cyan/10"
+            >
+              <img src="/tari-video.jpg" alt="" className="h-12 w-20 shrink-0 rounded-xl object-cover" loading="lazy" />
+              <span className="min-w-0">
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                  <Video className="size-4 text-brand-cyan" aria-hidden="true" />
+                  Prefer to talk? Video call {RECEPTIONIST_NAME}
+                </span>
+                <span className="block text-xs text-mist-300">Face to face with our AI receptionist, up to 3 minutes</span>
+              </span>
+            </button>
+          )}
+          {!chat.asked && (
+            <div className="flex flex-wrap gap-2 px-4 pb-3">
+              {suggestions(page).map((text) => (
+                <button
+                  key={text}
+                  type="button"
+                  disabled={chat.busy || dictation.listening}
+                  onClick={() => {
+                    // The suggestions disappear once one is sent, so keep focus in the chat.
+                    input.current?.focus({ preventScroll: true })
+                    send(text)
+                  }}
+                  className="rounded-full border border-brand-cyan/40 bg-brand-cyan/5 px-3 py-1.5 text-left text-sm text-mist-100 transition hover:border-brand-cyan hover:bg-brand-cyan/10 disabled:opacity-50"
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <footer className="space-y-2.5 border-t border-white/10 bg-ink-900 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            {chat.asked && (
+              <WhatsAppButton
+                size="sm"
+                message={whatsappSummary(chat.messages, page)}
+                label="Continue on WhatsApp"
+                className="w-full"
+              />
+            )}
+
+            {chat.limitReached ? (
+              <p className="rounded-xl bg-white/5 px-3 py-2 text-sm text-mist-200">
+                That’s a long chat! The team can go into more detail on WhatsApp, or start a new chat here.
+              </p>
+            ) : (
+              <form onSubmit={submit} className="flex items-end gap-2">
+                <label htmlFor={`${id}-input`} className="sr-only">
+                  Message {RECEPTIONIST_NAME}
+                </label>
+                <textarea
+                  id={`${id}-input`}
+                  ref={input}
+                  rows={1}
+                  value={dictation.listening ? dictation.interim : draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  onKeyDown={onKeyDown}
+                  readOnly={dictation.listening}
+                  maxLength={LIMITS.visitorChars}
+                  enterKeyHint="send"
+                  placeholder={dictation.listening ? 'Listening…' : 'Ask about our services or demos'}
+                  className="block min-h-11 flex-1 resize-none rounded-2xl border border-white/15 bg-ink-950 px-4 py-2.5 text-[0.95rem] leading-snug text-white placeholder:text-mist-400 hover:border-white/25"
+                />
+                {dictation.supported && (
+                  <IconButton
+                    label="Voice typing"
+                    pressed={dictation.listening}
+                    disabled={chat.busy}
+                    onClick={dictation.listening ? dictation.stop : dictation.start}
+                    className={cn('size-11 border border-white/15', dictation.listening && 'animate-pulse-ring border-brand-cyan text-brand-cyan')}
+                  >
+                    {dictation.listening ? <Square className="size-4" /> : <Mic className="size-5" />}
+                  </IconButton>
+                )}
+                <button
+                  type="submit"
+                  aria-label="Send"
+                  disabled={!draft.trim() || chat.busy || dictation.listening}
+                  className="grid size-11 shrink-0 place-items-center rounded-full bg-brand-gradient text-ink-950 transition hover:brightness-110 disabled:opacity-40"
+                >
+                  <SendHorizontal className="size-5" aria-hidden="true" />
+                </button>
+              </form>
+            )}
+
+            {dictation.problem && (
+              <p role="status" className="text-xs text-[#ffb4c1]">
+                {DICTATION_PROBLEMS[dictation.problem]}
+              </p>
+            )}
+          </footer>
+        </>
+      )}
     </section>
   )
 }
@@ -311,6 +395,7 @@ function IconButton({
   pressed,
   disabled,
   onClick,
+  onHover,
   className,
   children,
 }: {
@@ -318,6 +403,7 @@ function IconButton({
   pressed?: boolean
   disabled?: boolean
   onClick: () => void
+  onHover?: () => void
   className?: string
   children: ReactNode
 }) {
@@ -328,6 +414,8 @@ function IconButton({
       aria-pressed={pressed}
       disabled={disabled}
       onClick={onClick}
+      onPointerEnter={onHover}
+      onFocus={onHover}
       className={cn(
         'grid size-10 shrink-0 place-items-center rounded-full text-mist-200 transition hover:bg-white/10 hover:text-white disabled:opacity-40 [&>svg]:pointer-events-none',
         pressed && 'bg-white/10 text-white',
