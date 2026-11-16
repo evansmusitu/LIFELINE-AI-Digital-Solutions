@@ -73,7 +73,8 @@ interface Props {
   visitor: string
   /** False when the chat is closed: a running call ends. */
   active: boolean
-  whatsappMessage: string
+  /** The WhatsApp message, with what was said on the call so far added to the chat's. */
+  whatsappMessage: (call: ChatMessage[]) => string
   /** Called once per call that went live, with what to add to the chat. */
   onFinished: (record: ChatMessage[]) => void
   onBack: () => void
@@ -92,6 +93,7 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
   const [micMuted, setMicMuted] = useState(false)
   const [idle, setIdle] = useState(false)
   const [length, setLength] = useState(0)
+  const [announcement, setAnnouncement] = useState('')
 
   const mount = useRef<HTMLDivElement>(null)
   const instance = useRef<NapsterCompanionApiInstance | null>(null)
@@ -108,14 +110,19 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
   /** True while the SDK's "still there?" countdown is showing, so a call it ends is called quiet, not dropped. */
   const inactive = useRef(false)
   const phaseRef = useRef<Phase>('intro')
+  /** Counts call attempts. A token that arrives for an attempt that has since been cancelled is ended at once. */
+  const attempt = useRef(0)
+  const endButton = useRef<HTMLButtonElement>(null)
+  const endedHeading = useRef<HTMLHeadingElement>(null)
 
   const go = (next: Phase) => {
     phaseRef.current = next
     setPhase(next)
   }
 
-  /** Stops the SDK and tells the Worker. Safe to call more than once. */
+  /** Stops the SDK and tells the Worker. Safe to call more than once. Cancels an attempt still connecting. */
   const teardown = useCallback(() => {
+    attempt.current += 1
     if (timer.current !== null) window.clearInterval(timer.current)
     timer.current = null
     const current = instance.current
@@ -129,6 +136,28 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
     call.current = null
   }, [])
 
+  /** What was said on the call, as chat messages. */
+  const callMessages = useCallback((): ChatMessage[] => {
+    const record: ChatMessage[] = transcript.current.lines
+      .filter((line) => line.text.trim())
+      .map((line): ChatMessage =>
+        line.who === 'visitor'
+          ? { id: uid('you'), role: 'user', text: line.text.trim(), fromCall: true }
+          : { id: uid('tari'), role: 'assistant', text: line.text.trim(), source: 'ai', fromCall: true },
+      )
+    if (shared.current.length) {
+      const links = shared.current.map((d) => `/demos/${d.slug}`).join(' and ')
+      record.push({
+        id: uid('tari'),
+        role: 'assistant',
+        text: `Here ${shared.current.length > 1 ? 'are the demos' : 'is the demo'} I showed you on the call: ${links}.`,
+        source: 'ai',
+        fromCall: true,
+      })
+    }
+    return record
+  }, [])
+
   /** Ends the call and, if it went live, hands the conversation to the chat. */
   const finish = useCallback(
     (why: Ending) => {
@@ -140,25 +169,19 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
       if (!wasLive) return
       setLength(seconds)
       setEnding(why)
+      setAnnouncement(ENDINGS[why])
       go('ended')
-      const record: ChatMessage[] = [
+      onFinished([
         { id: uid('note'), role: 'note', text: `Video call with ${RECEPTIONIST_NAME} · ${callLength(seconds)}` },
-        ...transcript.current.lines
-          .filter((line) => line.text.trim())
-          .map((line): ChatMessage =>
-            line.who === 'visitor'
-              ? { id: uid('you'), role: 'user', text: line.text.trim() }
-              : { id: uid('tari'), role: 'assistant', text: line.text.trim(), source: 'ai' },
-          ),
-      ]
-      if (shared.current.length) {
-        const links = shared.current.map((d) => `/demos/${d.slug}`).join(' and ')
-        record.push({ id: uid('tari'), role: 'assistant', text: `Here ${shared.current.length > 1 ? 'are the demos' : 'is the demo'} I showed you on the call: ${links}.`, source: 'ai' })
-      }
-      onFinished(record)
+        ...callMessages(),
+      ])
     },
-    [onFinished, teardown],
+    [callMessages, onFinished, teardown],
   )
+  const finishRef = useRef(finish)
+  useEffect(() => {
+    finishRef.current = finish
+  }, [finish])
 
   const tick = useCallback(() => {
     const limits = call.current
@@ -179,6 +202,7 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
     if (startedAt.current !== null) return
     startedAt.current = Date.now()
     setSecondsLeft(call.current?.maxSeconds ?? 0)
+    setAnnouncement(`Call started. ${RECEPTIONIST_NAME} can hear you now.`)
     go('live')
     nameMediaSession()
     window.setTimeout(nameMediaSession, 2000)
@@ -194,7 +218,9 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
   const onEvent = useCallback((raw: unknown) => {
     const event = readEvent(raw)
     if (!event) return
-    if (event.kind === 'tari' || event.kind === 'visitor') {
+    if (event.kind === 'item') {
+      transcript.current.add(event)
+    } else if (event.kind === 'tari' || event.kind === 'visitor') {
       transcript.current.add(event)
       setCaption(transcript.current.caption)
       if (event.kind === 'tari' && event.final) {
@@ -224,6 +250,8 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
     const container = mount.current
     if (!container || phaseRef.current === 'connecting' || phaseRef.current === 'live') return
     teardown()
+    const mine = attempt.current
+    const stale = () => attempt.current !== mine
     finished.current = false
     unavailable.current = null
     tokenAsked.current = false
@@ -239,11 +267,14 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
     setIdle(false)
     setProblem(null)
     setStatus(null)
+    setAnnouncement(`Connecting to ${RECEPTIONIST_NAME}…`)
     go('connecting')
     // Let the video area appear first: the SDK sizes itself to it.
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    if (stale()) return
 
     const fail = (why: Problem) => {
+      if (stale()) return
       if (phaseRef.current === 'live') {
         finish('dropped')
         return
@@ -259,6 +290,11 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
         async () => {
           tokenAsked.current = true
           const result = await startVideoCall({ page, visitor })
+          // Cancelled while the token was on its way: end that call straight away.
+          if (stale()) {
+            if (result.type === 'ok') endVideoCall({ callId: result.callId, endKey: result.endKey })
+            throw new Error('Video call cancelled')
+          }
           if (result.type !== 'ok') {
             unavailable.current = result.reason
             throw new Error(`Video call unavailable: ${result.reason}`)
@@ -296,14 +332,28 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
             nameMediaSession()
           },
           onData: onEvent,
-          onError: () => fail(unavailable.current ?? (tokenAsked.current ? 'failed' : 'mic')),
+          // Before the call is live an error means it couldn't start. Once live, the SDK also reports
+          // errors it recovers from, so the call ends only when the session does (status "entry").
+          onError: () => {
+            if (phaseRef.current !== 'live') fail(unavailable.current ?? (tokenAsked.current ? 'failed' : 'mic'))
+          },
         },
       )
-      if (finished.current) teardown()
+      if (stale()) {
+        // Cancelled while the SDK was starting: this instance belongs to no attempt.
+        instance.current?.destroy()
+        instance.current = null
+      } else if (finished.current) teardown()
     } catch {
       fail(unavailable.current ?? (tokenAsked.current ? 'failed' : 'mic'))
     }
   }
+
+  // Focus follows the call: the end button while it connects or runs, the heading when it ends.
+  useEffect(() => {
+    if (phase === 'connecting') endButton.current?.focus({ preventScroll: true })
+    if (phase === 'ended') endedHeading.current?.focus({ preventScroll: true })
+  }, [phase])
 
   // Closing the chat ends a call that is running or connecting.
   useEffect(() => {
@@ -318,13 +368,15 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
     }
   }, [active, finish, teardown])
 
-  // Leaving the page ends the call at once (keepalive request), and so does unmounting.
+  // Leaving the page ends the call at once (keepalive request). Leaving the call screen (back to the
+  // chat, or a new chat) ends it too, and a call that was live still goes into the chat.
   useEffect(() => {
     const onHide = () => teardown()
     window.addEventListener('pagehide', onHide)
     return () => {
       window.removeEventListener('pagehide', onHide)
-      teardown()
+      if (phaseRef.current === 'live') finishRef.current('closed')
+      else teardown()
     }
   }, [teardown])
 
@@ -337,6 +389,11 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
   }
 
   const onStage = phase === 'connecting' || phase === 'live'
+  const whatsapp = whatsappMessage(phase === 'live' ? callMessages() : [])
+  /** Opening WhatsApp ends a live call, so it doesn't keep running (and costing) in the background. */
+  const endForWhatsApp = () => {
+    if (phaseRef.current === 'live') finish('hangup')
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -362,6 +419,9 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
       </div>
       <p className="sr-only" aria-live="polite">
         {spoken}
+      </p>
+      <p className="sr-only" role="status">
+        {announcement}
       </p>
 
       {phase === 'intro' && (
@@ -399,7 +459,7 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
             {PROBLEMS[problem]}
           </p>
           <div className="flex flex-col gap-2">
-            <WhatsAppButton message={whatsappMessage} label="Continue on WhatsApp" className="w-full" />
+            <WhatsAppButton message={whatsapp} label="Continue on WhatsApp" className="w-full" />
             <Button variant="ghost" onClick={onBack} className="w-full">
               <ArrowLeft className="size-4" aria-hidden="true" />
               Back to chat
@@ -410,13 +470,15 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
 
       {phase === 'ended' && (
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-6">
-          <p className="font-display text-lg font-bold text-white">{ENDINGS[ending]}</p>
+          <h3 ref={endedHeading} tabIndex={-1} className="font-display text-lg font-bold text-white outline-none">
+            {ENDINGS[ending]}
+          </h3>
           <p className="mt-1 text-sm text-mist-300">
             {callLength(length)}. What you talked about is now in the chat, and goes with your WhatsApp message.
           </p>
           <DemoLinks demos={demos} onDemoLink={onDemoLink} />
           <div className="mt-auto flex flex-col gap-2 pt-5">
-            <WhatsAppButton message={whatsappMessage} label="Continue on WhatsApp" className="w-full" />
+            <WhatsAppButton message={whatsapp} label="Continue on WhatsApp" className="w-full" />
             <Button variant="ghost" onClick={onBack} className="w-full">
               <ArrowLeft className="size-4" aria-hidden="true" />
               Back to chat
@@ -448,6 +510,7 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
               {micMuted ? <MicOff className="size-5" aria-hidden="true" /> : <Mic className="size-5" aria-hidden="true" />}
             </button>
             <button
+              ref={endButton}
               type="button"
               onClick={() => {
                 if (phaseRef.current === 'live') finish('hangup')
@@ -463,7 +526,14 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
               {phase === 'live' ? 'End call' : 'Cancel'}
             </button>
           </div>
-          <WhatsAppButton message={whatsappMessage} label="Continue on WhatsApp" size="sm" variant="secondary" className="w-full" />
+          <WhatsAppButton
+            message={whatsapp}
+            label="Continue on WhatsApp"
+            size="sm"
+            variant="secondary"
+            className="w-full"
+            onClick={endForWhatsApp}
+          />
         </div>
       )}
     </div>

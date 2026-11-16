@@ -61,7 +61,8 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
     })
   }, [page, setChat])
 
-  const visitorCount = chat.messages.filter((m) => m.role === 'user').length
+  // Lines spoken on a video call don't count towards the chat's message limit.
+  const visitorCount = chat.messages.filter((m) => m.role === 'user' && !m.fromCall).length
 
   const send = useCallback(
     async (input: string) => {

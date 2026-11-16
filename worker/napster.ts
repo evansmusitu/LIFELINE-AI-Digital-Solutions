@@ -60,29 +60,50 @@ export interface SessionSummary {
   createdAt: number
 }
 
-/** Every session in the Napster project, newest pages included. Used to measure total spend and today's calls. */
-export async function listSessions(key: string): Promise<SessionSummary[]> {
+/**
+ * Every session in the Napster project. Used to measure total spend and today's calls, so it throws
+ * rather than return a partial list: an undercount could let calls past the limits.
+ */
+export async function listSessions(key: string, now = Date.now()): Promise<SessionSummary[]> {
   const pageSize = 100
-  const all: SessionSummary[] = []
-  for (let pageIndex = 0; pageIndex < 50; pageIndex++) {
+  const all = new Map<string, SessionSummary>()
+  for (let pageIndex = 0; ; pageIndex++) {
+    if (pageIndex >= 50) throw new NapsterError(502, 'TooManySessionPages')
     const page = await call<{ items?: unknown[]; totalCount?: number }>(
       key,
       'GET',
       `/public/sessions?pageSize=${pageSize}&pageIndex=${pageIndex}`,
     )
+    const total = page?.totalCount
+    if (typeof total !== 'number') throw new NapsterError(502, 'MalformedSessionList')
     const items = Array.isArray(page?.items) ? page.items : []
     for (const item of items) {
       const record = item as Record<string, unknown>
-      all.push({
-        id: String(record.id ?? ''),
+      const id = String(record.id ?? '')
+      all.set(id, {
+        id,
         status: String(record.status ?? ''),
         cost: typeof record.cost === 'number' ? record.cost : null,
-        createdAt: typeof record.createdAt === 'number' ? record.createdAt : 0,
+        // Unknown creation time: count it as now, so it counts towards today's calls.
+        createdAt: typeof record.createdAt === 'number' ? record.createdAt : Math.floor(now / 1000),
       })
     }
-    if (items.length < pageSize || (typeof page?.totalCount === 'number' && all.length >= page.totalCount)) break
+    if (all.size >= total) break
+    // Fewer sessions than the total says, and no more pages: the list changed while paging.
+    if (items.length === 0) throw new NapsterError(502, 'IncompleteSessionList')
   }
-  return all
+  return [...all.values()]
+}
+
+/** One session's status, or null when Napster doesn't know it. */
+export async function sessionStatus(key: string, sessionId: string): Promise<string | null> {
+  try {
+    const data = await call<{ status?: unknown }>(key, 'GET', `/public/sessions/${encodeURIComponent(sessionId)}`)
+    return typeof data?.status === 'string' ? data.status : null
+  } catch (error) {
+    if (error instanceof NapsterError && (error.status === 404 || error.status === 400)) return null
+    throw error
+  }
 }
 
 export interface NewConnection {

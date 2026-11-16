@@ -7,6 +7,8 @@ import { DEMOS, type DemoMeta } from '../../demos/registry'
  */
 
 export type CallEvent =
+  /** A new spoken item. These arrive in conversation order, before the item's words. */
+  | { kind: 'item'; itemId: string; who: 'tari' | 'visitor' }
   | { kind: 'tari'; itemId: string; text: string; final: boolean }
   | { kind: 'visitor'; itemId: string; text: string }
   | { kind: 'tool'; callId: string; name: string; args: Record<string, unknown> }
@@ -38,6 +40,9 @@ export function readEvent(raw: unknown): CallEvent | null {
       if (!message || message.type === 'session') return null
       const itemId = typeof message.item_id === 'string' ? message.item_id : ''
       const content = typeof message.content === 'string' ? message.content : ''
+      if (message.action === 'created' && message.type === 'message' && itemId && (message.role === 'assistant' || message.role === 'user')) {
+        return { kind: 'item', itemId, who: message.role === 'assistant' ? 'tari' : 'visitor' }
+      }
       if (message.role === 'assistant' && (message.action === 'delta' || message.action === 'completed')) {
         return { kind: 'tari', itemId, text: content, final: message.action === 'completed' }
       }
@@ -72,19 +77,24 @@ export function showDemo(args: Record<string, unknown>): { demo: DemoMeta | null
 
 const normalise = (text: string) => ` ${text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `
 
-/** Ways Tari may say a demo's name: the full title, without a leading "AI", the part before a colon, or without a trailing generic word. */
+/**
+ * Ways Tari may say a demo's name: the full title, without a leading "AI", the part before a colon,
+ * or without a trailing "app", "system" or "catalogue". Shorter forms such as "workflow automation"
+ * or "customer support" are left out: they are also the names of services, said in passing.
+ */
 function namesFor(title: string): string[] {
   const names = new Set<string>()
   const add = (name: string) => {
     const n = normalise(name)
     if (n.trim().split(' ').length >= 2) names.add(n)
   }
+  const trim = (name: string) => name.replace(/\s+(app|system|catalogue)$/i, '')
   const base = title.split(':')[0]
   for (const name of [title, base]) {
     add(name)
     add(name.replace(/^AI\s+/i, ''))
-    add(name.replace(/\s+(app|system|tool|builder|catalogue|hub|desk)$/i, ''))
-    add(name.replace(/^AI\s+/i, '').replace(/\s+(app|system|tool|builder|catalogue|hub|desk)$/i, ''))
+    add(trim(name))
+    add(trim(name.replace(/^AI\s+/i, '')))
   }
   return [...names]
 }
@@ -112,41 +122,46 @@ export interface Line {
 }
 
 /**
- * What was said, in order. Tari's lines arrive in pieces and are replaced by the full text when
- * finished. A visitor's words can be transcribed after Tari has started replying, so their line is
- * placed before the reply that was already under way.
+ * What was said, in order. Each spoken item is announced (an "item" event) in conversation order
+ * before its words arrive, so its place is kept even when the visitor's words are transcribed after
+ * Tari has already answered. Tari's lines arrive in pieces and are replaced by the full text when
+ * finished. Lines still without words are left out of the record.
  */
 export class Transcript {
-  readonly lines: Line[] = []
-  private replyStartedAt: number | null = null
+  private readonly all: Line[] = []
+
+  get lines(): Line[] {
+    return this.all.filter((l) => l.text.trim())
+  }
+
+  private find(who: Line['who'], itemId: string): Line | undefined {
+    return this.all.find((l) => l.who === who && l.itemId === itemId)
+  }
 
   add(event: CallEvent): void {
-    if (event.kind === 'tari') {
-      const existing = this.lines.find((l) => l.who === 'tari' && l.itemId === event.itemId)
+    if (event.kind === 'item') {
+      if (!this.find(event.who, event.itemId)) this.all.push({ itemId: event.itemId, who: event.who, text: '' })
+    } else if (event.kind === 'tari') {
+      const existing = this.find('tari', event.itemId)
       // A finished line can arrive without its text: then the pieces already received are the line.
       if (existing) existing.text = event.final ? event.text || existing.text : existing.text + event.text
-      else {
-        this.replyStartedAt = this.lines.length
-        this.lines.push({ itemId: event.itemId, who: 'tari', text: event.text })
-      }
-      if (event.final) this.replyStartedAt = null
+      else this.all.push({ itemId: event.itemId, who: 'tari', text: event.text })
     } else if (event.kind === 'visitor') {
-      if (this.lines.some((l) => l.who === 'visitor' && l.itemId === event.itemId)) return
-      const line: Line = { itemId: event.itemId, who: 'visitor', text: event.text }
-      const at = this.replyStartedAt
-      if (at !== null && this.lines[at]?.who === 'tari') this.lines.splice(at, 0, line)
-      else this.lines.push(line)
+      const existing = this.find('visitor', event.itemId)
+      if (existing) existing.text = event.text
+      else this.all.push({ itemId: event.itemId, who: 'visitor', text: event.text })
     }
   }
 
   /** The full text of one of Tari's lines. */
   tariLine(itemId: string): string {
-    return this.lines.find((l) => l.who === 'tari' && l.itemId === itemId)?.text.trim() ?? ''
+    return this.find('tari', itemId)?.text.trim() ?? ''
   }
 
   /** The latest thing Tari said, for the caption. */
   get caption(): string {
-    for (let i = this.lines.length - 1; i >= 0; i--) if (this.lines[i].who === 'tari') return this.lines[i].text.trim()
+    const lines = this.lines
+    for (let i = lines.length - 1; i >= 0; i--) if (lines[i].who === 'tari') return lines[i].text.trim()
     return ''
   }
 }

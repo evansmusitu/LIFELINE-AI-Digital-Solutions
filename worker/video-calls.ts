@@ -1,6 +1,6 @@
 import { DurableObject } from 'cloudflare:workers'
 import type { VideoStartResponse } from '../src/receptionist/protocol'
-import { createConnection, endConnection, listSessions, NapsterError, updateInstructions, type SessionSummary } from './napster'
+import { createConnection, endConnection, listSessions, NapsterError, sessionStatus, updateInstructions, type SessionSummary } from './napster'
 
 /*
  * Starts and ends Tari's video calls, and keeps spending inside the limits. One object handles every
@@ -70,8 +70,8 @@ interface DayCounts {
 export interface Usage {
   /** Billed so far, in USD. */
   spent: number
-  /** Calls not billed yet (still running, or closed without a final cost). */
-  unsettled: number
+  /** Cost held back for calls not billed yet (still running, or closed without a final cost), in USD. */
+  reserved: number
   /** Calls created today (UTC), not counting ones that never connected. */
   today: number
   /** Calls running now. */
@@ -81,33 +81,45 @@ export interface Usage {
 const utcDay = (now: number) => new Date(now).toISOString().slice(0, 10)
 const utcDayStartSeconds = (now: number) => Math.floor(Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth(), new Date(now).getUTCDate()) / 1000)
 
+/**
+ * What to hold back for a call not billed yet: its most expensive possible cost, or more if it has
+ * somehow been running longer than that (for example when ending it at its cut-off keeps failing).
+ */
+export function reservation(createdAtSeconds: number, now: number, limits: VideoLimits): number {
+  const runningSeconds = Math.max(0, now / 1000 - createdAtSeconds)
+  return Math.max(maxCallCost(limits), (limits.pricePerMinute * (runningSeconds + GRACE_SECONDS)) / 60)
+}
+
 /** Totals from Napster's session list, plus calls made in the last two minutes that may not be listed yet. */
-export function measureUsage(sessions: SessionSummary[], recent: Call[], now: number): Usage {
+export function measureUsage(sessions: SessionSummary[], recent: Call[], now: number, limits: VideoLimits): Usage {
   const dayStart = utcDayStartSeconds(now)
   const listed = new Set(sessions.map((s) => s.id))
   let spent = 0
-  let unsettled = 0
+  let reserved = 0
   let today = 0
   let open = 0
   for (const session of sessions) {
+    const running = session.status === 'pending' || session.status === 'started'
     if (session.cost !== null) spent += session.cost
-    else if (session.status !== 'failed') unsettled++
+    // Running: as long as it has run so far. Closed but not billed yet: its length is fixed, at most the limit.
+    else if (running) reserved += reservation(session.createdAt, now, limits)
+    else if (session.status !== 'failed') reserved += maxCallCost(limits)
     if (session.createdAt >= dayStart && session.status !== 'failed') today++
-    if (session.status === 'pending' || session.status === 'started') open++
+    if (running) open++
   }
   for (const call of recent) {
     if (listed.has(call.sessionId) || now - call.mintedAt > 120_000) continue
-    unsettled++
+    reserved += reservation(call.mintedAt / 1000, now, limits)
     if (call.mintedAt >= dayStart * 1000) today++
     if (!call.ended) open++
   }
-  return { spent, unsettled, today, open }
+  return { spent, reserved, today, open }
 }
 
 /** Why a new call isn't allowed, or null when it is. */
 export function refusal(usage: Usage, limits: VideoLimits): Exclude<VideoStartResponse, { type: 'ok' }>['reason'] | null {
   const perCall = maxCallCost(limits)
-  if (usage.spent + usage.unsettled * perCall + perCall > limits.budgetUsd) return 'budget'
+  if (usage.spent + usage.reserved + perCall > limits.budgetUsd) return 'budget'
   if (usage.today >= limits.callsPerDay) return 'daily'
   if (usage.open >= limits.maxConcurrent) return 'busy'
   return null
@@ -210,7 +222,7 @@ export class VideoCalls extends DurableObject<Env> {
       console.warn('video: listing sessions failed', error instanceof Error ? error.message : String(error))
       return { type: 'unavailable', reason: 'error' }
     }
-    const usage = measureUsage(sessions, Object.values(this.calls), now)
+    const usage = measureUsage(sessions, Object.values(this.calls), now, limits)
     const refused = refusal(usage, limits)
     if (refused) return { type: 'unavailable', reason: refused }
 
@@ -275,7 +287,11 @@ export class VideoCalls extends DurableObject<Env> {
     else await this.ctx.storage.setAlarm(next)
   }
 
-  /** Ends calls that ran past their cut-off, and forgets calls older than a day. */
+  /**
+   * Ends calls that ran past their cut-off, and forgets calls older than a day. A call is only
+   * marked ended once Napster has ended it or says it is over: until then it keeps trying, waiting
+   * longer each time (15 s, 30 s, 1 min… up to 5 min), while its reservation keeps growing.
+   */
   async alarm() {
     await this.serial(async () => {
       const now = Date.now()
@@ -286,11 +302,13 @@ export class VideoCalls extends DurableObject<Env> {
             await endConnection(this.key(), call.sessionId)
             call.ended = true
           } catch (error) {
-            call.endAttempts += 1
-            call.cutoffAt = now + 15_000
-            // Napster also closes a call after 3 minutes of silence, so give up after a few tries.
-            if (call.endAttempts >= 8) call.ended = true
             console.warn('video: cut-off failed', error instanceof Error ? error.message : String(error))
+            const status = await sessionStatus(this.key(), call.sessionId).catch(() => 'unknown')
+            if (status === 'closed' || status === 'failed') call.ended = true
+            else {
+              call.endAttempts += 1
+              call.cutoffAt = now + Math.min(15_000 * 2 ** (call.endAttempts - 1), 300_000)
+            }
           }
         }
         if (call.ended && now - call.mintedAt > 86_400_000) delete calls[id]

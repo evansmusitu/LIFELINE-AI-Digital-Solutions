@@ -12,7 +12,8 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react'
-import { WhatsAppButton } from '../components/Button'
+import { Button, WhatsAppButton } from '../components/Button'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { cn } from '../lib/cn'
 import { paths } from '../lib/router'
 import { usePersistentState } from '../lib/storage'
@@ -135,7 +136,7 @@ export default function ReceptionistPanel({ open, page, fullScreen, onClose }: P
   useLayoutEffect(() => {
     const box = log.current
     if (box) box.scrollTop = box.scrollHeight
-  }, [chat.messages.length, lastText, open])
+  }, [chat.messages.length, lastText, open, view])
 
   // The message box grows with the text, up to about five lines.
   useLayoutEffect(() => {
@@ -240,23 +241,34 @@ export default function ReceptionistPanel({ open, page, fullScreen, onClose }: P
       </header>
 
       {view === 'video' ? (
-        <Suspense
-          fallback={
-            <p role="status" className="grid flex-1 place-items-center text-sm text-mist-300">
-              Opening the video call…
-            </p>
-          }
+        <ErrorBoundary
+          fallback={() => (
+            <div role="alert" className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+              <p className="text-mist-100">The video call didn’t load. A weak connection can interrupt the download.</p>
+              <Button variant="secondary" onClick={backToChat}>
+                Back to chat
+              </Button>
+            </div>
+          )}
         >
-          <VideoCall
-            page={page}
-            visitor={chat.visitor}
-            active={open}
-            whatsappMessage={whatsappSummary(chat.messages, page)}
-            onFinished={chat.addCallRecord}
-            onBack={backToChat}
-            onDemoLink={onDemoLink}
-          />
-        </Suspense>
+          <Suspense
+            fallback={
+              <p role="status" className="grid flex-1 place-items-center text-sm text-mist-300">
+                Opening the video call…
+              </p>
+            }
+          >
+            <VideoCall
+              page={page}
+              visitor={chat.visitor}
+              active={open}
+              whatsappMessage={(call) => whatsappSummary([...chat.messages, ...call], page)}
+              onFinished={chat.addCallRecord}
+              onBack={backToChat}
+              onDemoLink={onDemoLink}
+            />
+          </Suspense>
+        </ErrorBoundary>
       ) : (
         <>
           <div ref={log} aria-label="Conversation" role="region" className="relative flex-1 space-y-3 overflow-y-auto px-4 py-4">
