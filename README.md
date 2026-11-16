@@ -17,12 +17,18 @@ npm run dev       # local development server
 npm run build     # type-check and build the static site into dist/
 npm run preview   # serve the built site locally
 npm run lint      # oxlint
+npm test          # logic tests for the receptionist and video calls (Vitest)
 npm run cf-typegen  # regenerate worker/worker-configuration.d.ts after changing wrangler.jsonc
 ```
 
 Every pull request and every merge into `main` runs the **Check** workflow (`.github/workflows/check.yml`): a
-clean `npm ci`, `npm run lint` and `npm run build`, on the Node version in `.nvmrc`. It also checks that the Worker
-types match `wrangler.jsonc` and that the Worker bundles (`wrangler deploy --dry-run`). Its pass or fail mark shows on
+clean `npm ci`, `npm run lint`, `npm test` and `npm run build`, on the Node version in `.nvmrc`. It also checks that
+the Worker types match `wrangler.jsonc` and that the Worker bundles (`wrangler deploy --dry-run`).
+
+The tests in `test/` cover the parts where a mistake costs money or loses customers: the video call limits and the
+$40 budget, the receptionist's message limits, request checks, saved answers, and the chat and call helpers. They
+run the Worker code in Node with `cloudflare:workers` replaced by a stub (`vitest.config.ts`), and the Napster API
+and Workers AI replaced by fakes. Vitest doesn't type-check them. Its pass or fail mark shows on
 the pull request.
 
 ## Deploy

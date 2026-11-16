@@ -88,3 +88,19 @@ export interface KnowledgeDemo {
 export interface Knowledge {
   demos: KnowledgeDemo[]
 }
+
+/** The demo fields the receptionist needs, from the registry (src/demos/registry.ts). */
+export function toKnowledge(
+  demos: readonly { slug: string; title: string; summary: string; industries: readonly string[]; build: { timeline: string; services: readonly string[] } }[],
+): Knowledge {
+  return {
+    demos: demos.map((demo) => ({
+      slug: demo.slug,
+      title: demo.title,
+      summary: demo.summary,
+      industries: [...demo.industries],
+      timeline: demo.build.timeline,
+      services: [...demo.build.services],
+    })),
+  }
+}

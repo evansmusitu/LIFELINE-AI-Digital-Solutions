@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, runnerImport, type Plugin } from 'vite'
-import { KNOWLEDGE_PATH, type Knowledge } from './src/receptionist/protocol.ts'
+import { KNOWLEDGE_PATH, toKnowledge } from './src/receptionist/protocol.ts'
 
 /** The fields this file reads from src/config/site.ts and src/demos/registry.ts. */
 interface SiteInfo {
@@ -126,16 +126,7 @@ function studioPages(): Plugin {
 
       // The demo list the AI receptionist answers from (worker/receptionist.ts reads it). Built from
       // the registry, so a new demo is known to the receptionist as soon as it is on the site.
-      const knowledge: Knowledge = {
-        demos: demos.map((demo) => ({
-          slug: demo.slug,
-          title: demo.title,
-          summary: demo.summary,
-          industries: demo.industries,
-          timeline: demo.build.timeline,
-          services: demo.build.services,
-        })),
-      }
+      const knowledge = toKnowledge(demos)
       this.emitFile({
         type: 'asset',
         fileName: KNOWLEDGE_PATH.slice(1),
