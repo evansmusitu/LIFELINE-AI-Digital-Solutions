@@ -69,8 +69,10 @@ export function SiteFooter() {
           <p>
             <span className="font-semibold text-mist-300">Privacy.</span> This site uses no cookies, analytics or
             tracking. Anything you type into a demo is saved only in your own browser, so the demo remembers it next
-            time, and Reset demo clears it. WhatsApp buttons open a chat with a message ready for you to edit. It
-            reaches LIFELINE only if you send it.
+            time, and Reset demo clears it. Messages to our AI receptionist are processed by our AI provider to write each
+            reply. They aren’t kept or used to train AI, and the conversation is saved only in your browser. Voice
+            typing uses your browser’s own speech service. WhatsApp buttons open a chat with a message ready for you to
+            edit. It reaches LIFELINE only if you send it.
           </p>
           <p>
             © {YEAR} {SITE.brand}. These demos show what we can build. They use invented businesses and sample data,

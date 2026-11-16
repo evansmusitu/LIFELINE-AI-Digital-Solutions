@@ -1,5 +1,5 @@
 # Runs on every pull request and every merge into main: a clean install, the code-quality
-# check (oxlint) and the production build, which includes the TypeScript type check.
+# check (oxlint), the production build (which includes the TypeScript type check) and a dry run of the Worker deploy.
 # Cloudflare Workers Builds deploys the site separately. This check only reports pass or fail.
 name: Check
 
@@ -34,3 +34,6 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+      # The AI receptionist's Worker: types match wrangler.jsonc, and the script bundles. Neither needs a Cloudflare login.
+      - run: npx wrangler types worker/worker-configuration.d.ts --strict-vars=false --check
+      - run: npx wrangler deploy --dry-run --outdir .wrangler/dry-run

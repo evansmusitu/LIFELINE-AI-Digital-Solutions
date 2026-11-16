@@ -7,14 +7,35 @@
 	// pull request Preview its own workers.dev link.
 	"workers_dev": true,
 	"preview_urls": true,
-	// Static site only: Cloudflare serves the Vite build output. There is no Worker script.
+	// The Worker script answers /api/* only (the AI receptionist). Every other request is a
+	// static file from the Vite build, which Cloudflare serves free and without a request limit.
+	"main": "worker/index.ts",
 	"assets": {
 		"directory": "./dist",
+		"binding": "ASSETS",
 		// /demos/<slug> serves dist/demos/<slug>.html (the default "auto-trailing-slash" HTML
 		// handling). Unknown paths load the studio, which shows its "page not found" screen.
-		"not_found_handling": "single-page-application"
+		"not_found_handling": "single-page-application",
+		"run_worker_first": ["/api/*"],
 	},
-	// Required by Worker Previews (pull request preview links). The static site needs no
-	// preview-only settings.
-	"previews": {}
+	// Workers AI. On the Workers Free plan it includes 10,000 Neurons a day. Past that, calls
+	// fail instead of being billed, and the receptionist switches to its saved answers.
+	"ai": { "binding": "AI" },
+	// Message limits per minute and per day (worker/limiter.ts), so one visitor or one network can't
+	// use up the day's free AI allowance. The Workers Free plan only allows SQLite-backed classes.
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatLimiter"] }],
+	"vars": {
+		"AI_MODEL": "@cf/google/gemma-4-26b-a4b-it",
+		// "true" lets a request pick another model from the list in worker/receptionist.ts. Previews only.
+		"ALLOW_MODEL_CHOICE": "false",
+	},
+	// Worker Previews (pull request preview links) don't inherit the settings above, so they are
+	// repeated here. Each Preview gets its own ChatLimiter objects automatically.
+	"previews": {
+		"ai": { "binding": "AI" },
+		"vars": {
+			"AI_MODEL": "@cf/google/gemma-4-26b-a4b-it",
+			"ALLOW_MODEL_CHOICE": "true",
+		},
+	},
 }

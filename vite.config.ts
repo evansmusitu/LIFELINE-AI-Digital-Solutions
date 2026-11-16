@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, runnerImport, type Plugin } from 'vite'
+import { KNOWLEDGE_PATH, type Knowledge } from './src/receptionist/protocol.ts'
 
 /** The fields this file reads from src/config/site.ts and src/demos/registry.ts. */
 interface SiteInfo {
@@ -15,6 +16,8 @@ interface DemoInfo {
   slug: string
   title: string
   summary: string
+  industries: string[]
+  build: { timeline: string; services: string[] }
 }
 
 interface PageMeta {
@@ -118,6 +121,24 @@ function studioPages(): Plugin {
         type: 'asset',
         fileName: 'robots.txt',
         source: `User-agent: *\nAllow: /\n\nSitemap: ${site.url}/sitemap.xml\n`,
+      })
+
+      // The demo list the AI receptionist answers from (worker/receptionist.ts reads it). Built from
+      // the registry, so a new demo is known to the receptionist as soon as it is on the site.
+      const knowledge: Knowledge = {
+        demos: demos.map((demo) => ({
+          slug: demo.slug,
+          title: demo.title,
+          summary: demo.summary,
+          industries: demo.industries,
+          timeline: demo.build.timeline,
+          services: demo.build.services,
+        })),
+      }
+      this.emitFile({
+        type: 'asset',
+        fileName: KNOWLEDGE_PATH.slice(1),
+        source: `${JSON.stringify(knowledge)}\n`,
       })
     },
   }

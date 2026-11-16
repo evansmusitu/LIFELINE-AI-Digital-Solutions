@@ -1,7 +1,8 @@
 # LIFELINE AI CONCIERGE Demo Studio
 
 Interactive demos of the systems LIFELINE AI CONCIERGE builds, made to turn visitors into WhatsApp enquiries.
-Every demo runs in the browser on sample data. There is no backend, login or real payment.
+Every demo runs in the browser on sample data. There is no login or real payment. The only server code is the AI
+receptionist, a small Cloudflare Worker in `worker/` (see [AI receptionist](#ai-receptionist)).
 
 The plan, brand rules and data policy are in [`handoff/PROJECT_BRIEF.md`](handoff/PROJECT_BRIEF.md).
 
@@ -15,16 +16,20 @@ npm run dev       # local development server
 npm run build     # type-check and build the static site into dist/
 npm run preview   # serve the built site locally
 npm run lint      # oxlint
+npm run cf-typegen  # regenerate worker/worker-configuration.d.ts after changing wrangler.jsonc
 ```
 
 Every pull request and every merge into `main` runs the **Check** workflow (`.github/workflows/check.yml`): a
-clean `npm ci`, `npm run lint` and `npm run build`, on the Node version in `.nvmrc`. Its pass or fail mark shows on
+clean `npm ci`, `npm run lint` and `npm run build`, on the Node version in `.nvmrc`. It also checks that the Worker
+types match `wrangler.jsonc` and that the Worker bundles (`wrangler deploy --dry-run`). Its pass or fail mark shows on
 the pull request.
 
 ## Deploy
 
-The site is hosted on Cloudflare Workers as a static site. Workers Builds builds it from this GitHub repository,
-and the hosting settings are in `wrangler.jsonc`.
+The site is hosted on Cloudflare Workers: the static build in `dist/`, plus a small Worker script that answers
+`/api/*` only. Workers Builds builds it from this GitHub repository, and the hosting settings are in `wrangler.jsonc`.
+Static files are free and unlimited on Cloudflare. The Worker uses the Workers Free plan allowance (100,000 requests a
+day).
 
 | Setting | Value |
 |---|---|
@@ -71,12 +76,49 @@ lettering is unreadable below about 120 px. If the logo changes, regenerate all 
 If the site moves to another address, change `url` in `src/config/site.ts`. Link previews, canonical links and the
 sitemap all use it.
 
+## AI receptionist
+
+Tari, the chat that opens from "Ask our AI receptionist" on the home page and "Ask our AI about this demo" on demo
+pages, answers questions about LIFELINE and its demos with a real AI model, then hands the visitor to WhatsApp with
+their questions filled in.
+
+- **How it works.** The browser posts the conversation to `/api/receptionist`. The Worker (`worker/receptionist.ts`)
+  checks it, adds the instructions and facts in `worker/prompt.ts`, and streams the reply from Workers AI. The model
+  is set by `AI_MODEL` in `wrangler.jsonc` (Gemma 4 26B, with thinking switched off). In a comparison on the
+  Preview it wrote the most natural Shona of the three models listed in `worker/receptionist.ts`.
+- **Facts.** The prompt uses the same text as the website: `src/config/site.ts`, `src/config/about.ts`, and the demo
+  list, which the build writes to `dist/receptionist-knowledge.json` from `src/demos/registry.ts`. A new demo is
+  known to the receptionist as soon as it is on the site.
+- **Cost: $0.** On the Workers Free plan, Workers AI includes 10,000 Neurons a day (reset at 00:00 UTC). Past that,
+  Cloudflare refuses the call instead of billing for it. One reply uses an estimated 20 to 25 Neurons (about 2,000
+  tokens of instructions and facts, plus the reply), so roughly 400 replies a day. Moving the account to the Workers Paid plan would change this: usage past the allowance would then be
+  billed.
+- **Saved answers.** When there is no AI reply (allowance used up, too many messages, offline or an error), the browser
+  answers from `src/receptionist/fallback.ts` and labels it "Saved answer". The chat never stops working.
+- **Limits.** Per visitor: 8 messages a minute and 40 a day. Per network (an IPv4 address, or an IPv6 /64, which
+  many phones on one mobile network can share): 30 a minute and 150 a day. A small Durable Object counts them exactly
+  (`worker/limiter.ts`, included in the Free plan); Cloudflare's Rate Limiting binding was tried first, but in
+  testing it let every request through. If the limiter fails, visitors get saved answers rather than unprotected AI
+  calls. Messages are capped at 500 characters (also after joining several), with the last 10 messages and at most
+  5,000 characters of history sent. Only the site's own pages are accepted, which stops other websites but not a
+  script that fakes the header: the daily caps limit what one network can use, and a bot check (Turnstile) would be
+  the next step if scripts spread across many networks start using up the allowance.
+- **Voice.** "Read replies aloud" uses the phone's built-in voice. Voice typing uses the browser's speech service and
+  only shows where the browser supports it (Chrome, Edge, Safari).
+- **Privacy.** Messages go to Workers AI to write each reply. The production model has zero data retention, and
+  Cloudflare doesn't train on customer content. The Worker doesn't log message text. The conversation is saved only in the visitor's browser.
+- **Previews.** Previews accept a `model` field in the request (`ALLOW_MODEL_CHOICE`), to compare the models listed
+  in `worker/receptionist.ts`. Production ignores it.
+
 ## Where things live
 
 | What | Where |
 |---|---|
 | Site address, WhatsApp number, email, link to the earlier studio, tagline, headline, search description, services list | `src/config/site.ts` |
 | Pre-filled WhatsApp messages | `src/lib/whatsapp.ts` |
+| About text, "How we work" principles and the 3-step process (also used by the AI receptionist) | `src/config/about.ts` |
+| AI receptionist: chat panel, saved answers, voice | `src/receptionist/` |
+| AI receptionist: Worker, instructions and facts, rate limits | `worker/`, `wrangler.jsonc` |
 | Brand colours (confirmed) and fonts | `@theme` in `src/index.css` |
 | Demo list, card text, "Try this" tips, "How we'd build this" timelines | `src/demos/registry.ts` |
 | Studio pages (home, demo page frame, 404) | `src/pages/` |

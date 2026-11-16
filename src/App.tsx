@@ -7,6 +7,7 @@ import { parseRoute, scrollToSection, useLocation } from './lib/router'
 import { DemoPage } from './pages/DemoPage'
 import { HomePage } from './pages/HomePage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { ReceptionistProvider } from './receptionist/ReceptionistProvider'
 
 const STUDIO_TITLE = 'LIFELINE AI CONCIERGE | Demo Studio'
 
@@ -51,25 +52,28 @@ export default function App() {
 
   return (
     <ToastProvider>
-      <a
-        href="#main"
-        onClick={(event) => {
-          event.preventDefault()
-          document.getElementById('main')?.focus()
-        }}
-        className="sr-only z-50 rounded-full bg-white px-4 py-2 font-semibold text-ink-950 focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
-      >
-        Skip to content
-      </a>
-      <div className="flex min-h-dvh flex-col pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
-        <SiteHeader />
-        <main id="main" tabIndex={-1} className="flex-1 outline-none">
-          {route.name === 'home' && <HomePage />}
-          {route.name === 'demo' && (demo ? <DemoPage key={demo.slug} demo={demo} /> : <NotFoundPage />)}
-          {route.name === 'not-found' && <NotFoundPage />}
-        </main>
-        <SiteFooter />
-      </div>
+      {/* The AI receptionist knows which demo is on screen. */}
+      <ReceptionistProvider page={demo ? demo.slug : 'home'}>
+        <a
+          href="#main"
+          onClick={(event) => {
+            event.preventDefault()
+            document.getElementById('main')?.focus()
+          }}
+          className="sr-only z-50 rounded-full bg-white px-4 py-2 font-semibold text-ink-950 focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+        >
+          Skip to content
+        </a>
+        <div className="flex min-h-dvh flex-col pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
+          <SiteHeader />
+          <main id="main" tabIndex={-1} className="flex-1 outline-none">
+            {route.name === 'home' && <HomePage />}
+            {route.name === 'demo' && (demo ? <DemoPage key={demo.slug} demo={demo} /> : <NotFoundPage />)}
+            {route.name === 'not-found' && <NotFoundPage />}
+          </main>
+          <SiteFooter />
+        </div>
+      </ReceptionistProvider>
     </ToastProvider>
   )
 }
