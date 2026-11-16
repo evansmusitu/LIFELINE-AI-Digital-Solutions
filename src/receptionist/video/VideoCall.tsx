@@ -16,7 +16,7 @@ import { uid } from '../../lib/time'
 import type { ChatMessage } from '../chat'
 import { RECEPTIONIST_NAME, type VideoUnavailableReason } from '../protocol'
 import { endVideoCall, startVideoCall } from './api'
-import { callLength, clock, readEvent, showDemo, Transcript } from './events'
+import { callLength, clock, demosMentioned, readEvent, showDemo, Transcript } from './events'
 
 /*
  * A live video call with Tari: a talking avatar that listens and answers out loud. The page asks
@@ -180,20 +180,28 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
     timer.current = window.setInterval(tick, 250)
   }, [tick])
 
+  const share = useCallback((demo: DemoMeta) => {
+    if (shared.current.includes(demo)) return
+    shared.current = [...shared.current, demo]
+    setDemos(shared.current)
+  }, [])
+
   const onEvent = useCallback((raw: unknown) => {
     const event = readEvent(raw)
     if (!event) return
     if (event.kind === 'tari' || event.kind === 'visitor') {
       transcript.current.add(event)
       setCaption(transcript.current.caption)
-      if (event.kind === 'tari' && event.final) setSpoken(`${RECEPTIONIST_NAME}: ${transcript.current.tariLine(event.itemId)}`)
+      if (event.kind === 'tari' && event.final) {
+        const line = transcript.current.tariLine(event.itemId)
+        setSpoken(`${RECEPTIONIST_NAME}: ${line}`)
+        // Every demo Tari names gets its link, whether or not she called show_demo.
+        demosMentioned(line).forEach(share)
+      }
       setIdle(false)
     } else if (event.kind === 'tool' && event.name === 'show_demo') {
       const { demo, output } = showDemo(event.args)
-      if (demo && !shared.current.includes(demo)) {
-        shared.current = [...shared.current, demo]
-        setDemos(shared.current)
-      }
+      if (demo) share(demo)
       instance.current?.sendCommand({
         type: DataChannelMessageType.FUNCTION_CALL_OUTPUT,
         data: { call_id: event.callId, output },
@@ -203,7 +211,7 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
     } else if (event.kind === 'ended') {
       finish('dropped')
     }
-  }, [finish])
+  }, [finish, share])
 
   const start = async () => {
     const container = mount.current

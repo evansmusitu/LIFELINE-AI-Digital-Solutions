@@ -70,6 +70,41 @@ export function showDemo(args: Record<string, unknown>): { demo: DemoMeta | null
   return { demo: null, output: { shown: false, reason: 'No demo has that ID.', ids: DEMOS.map((d) => d.slug) } }
 }
 
+const normalise = (text: string) => ` ${text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `
+
+/** Ways Tari may say a demo's name: the full title, without a leading "AI", the part before a colon, or without a trailing generic word. */
+function namesFor(title: string): string[] {
+  const names = new Set<string>()
+  const add = (name: string) => {
+    const n = normalise(name)
+    if (n.trim().split(' ').length >= 2) names.add(n)
+  }
+  const base = title.split(':')[0]
+  for (const name of [title, base]) {
+    add(name)
+    add(name.replace(/^AI\s+/i, ''))
+    add(name.replace(/\s+(app|system|tool|builder|catalogue|hub|desk)$/i, ''))
+    add(name.replace(/^AI\s+/i, '').replace(/\s+(app|system|tool|builder|catalogue|hub|desk)$/i, ''))
+  }
+  return [...names]
+}
+
+/**
+ * Demos Tari named in what she said, in the order she said them. A backup for the show_demo tool,
+ * which the model doesn't always call, so the link appears whenever she names a demo.
+ */
+export function demosMentioned(text: string): DemoMeta[] {
+  const spoken = normalise(text)
+  const found: { demo: DemoMeta; at: number }[] = []
+  for (const demo of DEMOS) {
+    const positions = namesFor(demo.title)
+      .map((name) => spoken.indexOf(name))
+      .filter((at) => at >= 0)
+    if (positions.length) found.push({ demo, at: Math.min(...positions) })
+  }
+  return found.sort((a, b) => a.at - b.at).map((f) => f.demo)
+}
+
 export interface Line {
   itemId: string
   who: 'tari' | 'visitor'
