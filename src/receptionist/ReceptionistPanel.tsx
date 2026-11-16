@@ -44,10 +44,12 @@ interface Props {
   page: string
   /** True on phones, where the chat covers the whole screen and the page behind is inert. */
   fullScreen: boolean
+  /** Changes when a button asks to open on the video call screen. */
+  videoRequest: number
   onClose: () => void
 }
 
-export default function ReceptionistPanel({ open, page, fullScreen, onClose }: Props) {
+export default function ReceptionistPanel({ open, page, fullScreen, videoRequest, onClose }: Props) {
   const id = useId()
   const [voiceOn, setVoiceOn] = usePersistentState('receptionist.voice', () => false)
   const voice = useRef(voiceOn)
@@ -171,6 +173,18 @@ export default function ReceptionistPanel({ open, page, fullScreen, onClose }: P
     cancelDictation()
     setView('video')
   }
+
+  // A "Video call" button outside the chat opens it on the video screen.
+  const [shownVideoRequest, setShownVideoRequest] = useState(0)
+  if (videoRequest !== shownVideoRequest) {
+    setShownVideoRequest(videoRequest)
+    setView('video')
+  }
+  useEffect(() => {
+    if (videoRequest === 0) return
+    stopSpeaking()
+    cancelDictation()
+  }, [videoRequest, cancelDictation])
 
   const backToChat = useCallback(() => {
     setView('chat')

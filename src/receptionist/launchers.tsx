@@ -1,27 +1,32 @@
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Video } from 'lucide-react'
 import { Button } from '../components/Button'
 import { cn } from '../lib/cn'
 import { useReceptionist } from './receptionist-context'
 
 type ButtonProps = Parameters<typeof Button>[0]
 
-/** A studio button that opens the AI receptionist. `iconOnly` keeps the label for screen readers only. */
+/**
+ * A studio button that opens the AI receptionist. `iconOnly` keeps the label for screen readers only.
+ * `video` opens it on the video call screen.
+ */
 export function AskAiButton({
   label,
   iconOnly,
+  video,
   className,
   ...props
-}: Omit<ButtonProps, 'onClick' | 'children'> & { label: string; iconOnly?: boolean }) {
+}: Omit<ButtonProps, 'onClick' | 'children'> & { label: string; iconOnly?: boolean; video?: boolean }) {
   const { open, prefetch } = useReceptionist()
+  const Icon = video ? Video : Sparkles
   return (
     <Button
       {...props}
       className={cn(iconOnly && 'size-11 shrink-0 px-0!', className)}
-      onClick={(event) => open(event.currentTarget)}
+      onClick={(event) => open(event.currentTarget, { video })}
       onPointerEnter={prefetch}
       onFocus={prefetch}
     >
-      <Sparkles className={cn('shrink-0', iconOnly ? 'size-5' : 'size-[1.1em]')} aria-hidden="true" />
+      <Icon className={cn('shrink-0', iconOnly ? 'size-5' : 'size-[1.1em]')} aria-hidden="true" />
       <span className={cn(iconOnly && 'sr-only')}>{label}</span>
     </Button>
   )

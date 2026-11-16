@@ -5,7 +5,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary'
 import { GENERAL_ENQUIRY } from '../lib/whatsapp'
 import { PANEL_FRAME } from './frame'
 import { RECEPTIONIST_NAME } from './protocol'
-import { ReceptionistContext } from './receptionist-context'
+import { ReceptionistContext, type OpenOptions } from './receptionist-context'
 
 /* The chat code is a separate download, fetched the first time a visitor opens it (or hovers a button that does). */
 const loadPanel = () => import('./ReceptionistPanel')
@@ -34,11 +34,14 @@ export function ReceptionistProvider({ page, children }: { page: string; childre
   const [mounted, setMounted] = useState(false)
   const returnFocus = useRef<HTMLElement | null>(null)
   const restoreFocus = useRef(false)
+  /** Goes up by one each time a button asks for the video screen, so the panel switches to it. */
+  const [videoRequest, setVideoRequest] = useState(0)
   const phone = useSyncExternalStore(subscribePhone, isPhone)
 
-  const open = useCallback((from?: HTMLElement | null) => {
+  const open = useCallback((from?: HTMLElement | null, options?: OpenOptions) => {
     const active = document.activeElement
     returnFocus.current = from ?? (active instanceof HTMLElement ? active : null)
+    if (options?.video) setVideoRequest((n) => n + 1)
     setMounted(true)
     setOpen(true)
   }, [])
@@ -76,7 +79,7 @@ export function ReceptionistProvider({ page, children }: { page: string; childre
       {mounted && (
         <ErrorBoundary fallback={() => (isOpen ? <PanelProblem onClose={close} /> : null)}>
           <Suspense fallback={isOpen ? <PanelLoading onClose={close} /> : null}>
-            <ReceptionistPanel open={isOpen} page={page} fullScreen={phone} onClose={close} />
+            <ReceptionistPanel open={isOpen} page={page} fullScreen={phone} videoRequest={videoRequest} onClose={close} />
           </Suspense>
         </ErrorBoundary>
       )}
