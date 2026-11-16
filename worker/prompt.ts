@@ -25,11 +25,12 @@ function aboutLines(): string[] {
 /** How a phone number sounds when spoken in groups, for example "+263 781 572 008". */
 function spokenNumber(display: string): string {
   const digits = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
-  return display
-    .replace('+', 'plus ')
+  const groups = display
+    .replace('+', '')
     .split(' ')
     .map((group) => group.replace(/\d/g, (d) => `${digits[Number(d)]} `).trim())
     .join(', ')
+  return display.startsWith('+') ? `plus ${groups}` : groups
 }
 
 /**
