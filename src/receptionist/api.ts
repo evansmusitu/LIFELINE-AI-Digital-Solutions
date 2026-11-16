@@ -31,6 +31,7 @@ export async function askReceptionist(
   const type = response.headers.get('content-type') ?? ''
   if (!response.ok || !type.includes('application/x-ndjson') || !response.body) {
     const body: unknown = await response.json().catch(() => null)
+    if (signal.aborted) throw new DOMException('The chat was reset', 'AbortError')
     const reason = (body as Partial<NoReply> | null)?.reason
     return { ok: false, reason: reason ?? 'error' }
   }

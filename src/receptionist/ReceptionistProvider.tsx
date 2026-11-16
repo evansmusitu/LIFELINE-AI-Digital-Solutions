@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import { lazy, Suspense, useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { WhatsAppButton } from '../components/Button'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { GENERAL_ENQUIRY } from '../lib/whatsapp'
@@ -11,6 +11,19 @@ import { ReceptionistContext } from './receptionist-context'
 const loadPanel = () => import('./ReceptionistPanel')
 const ReceptionistPanel = lazy(loadPanel)
 
+/** Phones, where the chat covers the whole screen (see PANEL_FRAME). Follows rotation and resizing. */
+const PHONE = window.matchMedia('(max-width: 639px)')
+const subscribePhone = (onChange: () => void) => {
+  PHONE.addEventListener('change', onChange)
+  return () => PHONE.removeEventListener('change', onChange)
+}
+const isPhone = () => PHONE.matches
+
+/** Something focus can go back to: still on the page and shown. */
+function focusable(element: HTMLElement | null): element is HTMLElement {
+  return !!element && element.isConnected && element.getClientRects().length > 0
+}
+
 /**
  * Holds the receptionist for the whole studio. `page` is "home" or the slug of the demo on screen,
  * so the receptionist knows what the visitor is looking at. Once opened, the chat stays mounted
@@ -20,6 +33,8 @@ export function ReceptionistProvider({ page, children }: { page: string; childre
   const [isOpen, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const returnFocus = useRef<HTMLElement | null>(null)
+  const restoreFocus = useRef(false)
+  const phone = useSyncExternalStore(subscribePhone, isPhone)
 
   const open = useCallback((from?: HTMLElement | null) => {
     const active = document.activeElement
@@ -29,9 +44,20 @@ export function ReceptionistProvider({ page, children }: { page: string; childre
   }, [])
 
   const close = useCallback(() => {
+    restoreFocus.current = true
     setOpen(false)
-    returnFocus.current?.focus()
   }, [])
+
+  // After closing, once the page has re-rendered: the button that opened the chat may only now be
+  // visible again (the floating one hides while the chat is open), or may be gone after a link
+  // inside the chat changed the page. Then focus goes to the main content.
+  useEffect(() => {
+    if (isOpen || !restoreFocus.current) return
+    restoreFocus.current = false
+    const target = returnFocus.current
+    if (focusable(target)) target.focus()
+    else document.getElementById('main')?.focus({ preventScroll: true })
+  }, [isOpen])
 
   const prefetch = useCallback(() => {
     loadPanel().catch(() => {
@@ -43,11 +69,14 @@ export function ReceptionistProvider({ page, children }: { page: string; childre
 
   return (
     <ReceptionistContext.Provider value={value}>
-      {children}
+      {/* On phones the open chat covers the page, so the page behind can't be reached by Tab or a screen reader. */}
+      <div className="contents" inert={isOpen && phone}>
+        {children}
+      </div>
       {mounted && (
         <ErrorBoundary fallback={() => (isOpen ? <PanelProblem onClose={close} /> : null)}>
           <Suspense fallback={isOpen ? <PanelLoading onClose={close} /> : null}>
-            <ReceptionistPanel open={isOpen} page={page} onClose={close} />
+            <ReceptionistPanel open={isOpen} page={page} fullScreen={phone} onClose={close} />
           </Suspense>
         </ErrorBoundary>
       )}
@@ -56,10 +85,14 @@ export function ReceptionistProvider({ page, children }: { page: string; childre
 }
 
 function PanelShell({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  const shell = useRef<HTMLElement>(null)
+  useEffect(() => shell.current?.focus(), [])
   return (
     <section
+      ref={shell}
       role="dialog"
       aria-label={`${RECEPTIONIST_NAME}, LIFELINE’s AI receptionist`}
+      tabIndex={-1}
       onKeyDown={(event) => event.key === 'Escape' && onClose()}
       className={PANEL_FRAME}
     >

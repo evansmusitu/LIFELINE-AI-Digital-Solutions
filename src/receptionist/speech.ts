@@ -34,6 +34,17 @@ export function speak(text: string) {
   synth.speak(utterance)
 }
 
+/**
+ * iPhones only let a page speak after it has spoken once during a tap. Call this from a tap (turning
+ * read-aloud on, sending a message), so replies that arrive later can be read aloud.
+ */
+export function unlockSpeech() {
+  if (!canSpeak()) return
+  const silent = new SpeechSynthesisUtterance(' ')
+  silent.volume = 0
+  window.speechSynthesis.speak(silent)
+}
+
 export function stopSpeaking() {
   if (canSpeak()) window.speechSynthesis.cancel()
 }
@@ -79,13 +90,21 @@ export function useDictation(onFinal: (text: string) => void) {
   const [interim, setInterim] = useState('')
   const [problem, setProblem] = useState<DictationProblem | null>(null)
   const active = useRef<Recognition | null>(null)
+  /** Set by cancel(): the recognition is ending, and what was heard must not be sent. */
+  const discard = useRef(false)
   const finalCallback = useRef(onFinal)
 
   useEffect(() => {
     finalCallback.current = onFinal
   }, [onFinal])
 
-  useEffect(() => () => active.current?.abort(), [])
+  useEffect(
+    () => () => {
+      discard.current = true
+      active.current?.abort()
+    },
+    [],
+  )
 
   const start = useCallback(() => {
     const Klass = recognitionClass()
@@ -112,8 +131,9 @@ export function useDictation(onFinal: (text: string) => void) {
       active.current = null
       setListening(false)
       setInterim('')
-      if (heard) finalCallback.current(heard)
+      if (heard && !discard.current) finalCallback.current(heard)
     }
+    discard.current = false
     active.current = recognition
     setProblem(null)
     setListening(true)
@@ -126,7 +146,15 @@ export function useDictation(onFinal: (text: string) => void) {
     }
   }, [])
 
+  /** Stops listening and sends what was heard (the Stop button). */
   const stop = useCallback(() => active.current?.stop(), [])
 
-  return { supported, listening, interim, problem, start, stop }
+  /** Stops listening and throws away what was heard (closing the chat, starting a new one). */
+  const cancel = useCallback(() => {
+    if (!active.current) return
+    discard.current = true
+    active.current.abort()
+  }, [])
+
+  return { supported, listening, interim, problem, start, stop, cancel }
 }

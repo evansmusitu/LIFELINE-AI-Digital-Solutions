@@ -17,10 +17,9 @@ import { usePersistentState } from '../lib/storage'
 import { cleanReply, replyParts, spokenText, suggestions, whatsappSummary, type ChatMessage } from './chat'
 import { PANEL_FRAME } from './frame'
 import { LIMITS, RECEPTIONIST_NAME } from './protocol'
-import { canSpeak, speak, stopSpeaking, useDictation, type DictationProblem } from './speech'
+import { canSpeak, speak, stopSpeaking, unlockSpeech, useDictation, type DictationProblem } from './speech'
 import { useReceptionistChat } from './useReceptionistChat'
 
-const PHONE = '(max-width: 639px)'
 
 const DICTATION_PROBLEMS: Record<DictationProblem, string> = {
   blocked: 'Microphone access is blocked for this site. You can allow it in your browser settings, or type instead.',
@@ -32,13 +31,16 @@ interface Props {
   open: boolean
   /** "home" or the slug of the demo on screen. */
   page: string
+  /** True on phones, where the chat covers the whole screen and the page behind is inert. */
+  fullScreen: boolean
   onClose: () => void
 }
 
-export default function ReceptionistPanel({ open, page, onClose }: Props) {
+export default function ReceptionistPanel({ open, page, fullScreen, onClose }: Props) {
   const id = useId()
   const [voiceOn, setVoiceOn] = usePersistentState('receptionist.voice', () => false)
   const voice = useRef(voiceOn)
+  const isOpen = useRef(open)
   const [announcement, setAnnouncement] = useState('')
   const [draft, setDraft] = useState('')
   const input = useRef<HTMLTextAreaElement>(null)
@@ -50,49 +52,59 @@ export default function ReceptionistPanel({ open, page, onClose }: Props) {
     if (!voiceOn) stopSpeaking()
   }, [voiceOn])
 
+  useEffect(() => {
+    isOpen.current = open
+  }, [open])
+
   const onReply = useCallback((text: string) => {
     const spoken = spokenText(text)
     setAnnouncement(`${RECEPTIONIST_NAME}: ${spoken}`)
-    if (voice.current) speak(spoken)
+    // Not when the chat was closed while the reply was on its way.
+    if (voice.current && isOpen.current) speak(spoken)
   }, [])
 
   const chat = useReceptionistChat(page, onReply)
-  const { send } = chat
-  const dictation = useDictation(
-    useCallback((text: string) => {
-      void send(text)
-    }, [send]),
+  const { send: sendMessage } = chat
+  /** Every send starts from a tap, the moment iPhones allow speech to be unlocked. */
+  const send = useCallback(
+    (text: string) => {
+      if (voice.current) unlockSpeech()
+      void sendMessage(text)
+    },
+    [sendMessage],
   )
-  const { stop: stopDictation } = dictation
+  const dictation = useDictation(send)
+  const { cancel: cancelDictation } = dictation
 
   // On opening: focus the message box, except on touch screens, where that would pop up the keyboard at once.
   useEffect(() => {
     if (!open) return
     const touch = window.matchMedia('(pointer: coarse)').matches
-    ;(touch ? panel.current : input.current)?.focus()
+    ;((touch ? null : input.current) ?? panel.current)?.focus()
   }, [open])
 
-  // The chat covers the whole screen on phones. Stop the page behind it from scrolling.
+  // Full screen on phones: stop the page behind from scrolling.
   useEffect(() => {
-    if (!open || !window.matchMedia(PHONE).matches) return
+    if (!open || !fullScreen) return
     const previous = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = previous
     }
-  }, [open])
+  }, [open, fullScreen])
 
   useEffect(() => {
     if (open) return
     stopSpeaking()
-    stopDictation()
-  }, [open, stopDictation])
+    cancelDictation()
+  }, [open, cancelDictation])
 
   // Escape closes the chat while focus is in it, or nowhere in particular (after the button pressed has gone).
   useEffect(() => {
     if (!open) return
     const onKey = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented) return
+      // Not while an input method (for example a Chinese or Japanese keyboard) is mid-word.
+      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return
       const active = document.activeElement
       if (active === document.body || active === null || panel.current?.contains(active)) {
         event.preventDefault()
@@ -127,7 +139,7 @@ export default function ReceptionistPanel({ open, page, onClose }: Props) {
     const text = draft.trim()
     if (!text || chat.busy) return
     setDraft('')
-    void send(text)
+    send(text)
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -139,12 +151,12 @@ export default function ReceptionistPanel({ open, page, onClose }: Props) {
 
   // A demo link inside the chat opens the demo. On phones the chat covers it, so close the chat first.
   const onDemoLink = () => {
-    if (window.matchMedia(PHONE).matches) onClose()
+    if (fullScreen) onClose()
   }
 
   const restart = () => {
     stopSpeaking()
-    stopDictation()
+    cancelDictation()
     chat.restart()
     setDraft('')
     setAnnouncement('')
@@ -155,6 +167,7 @@ export default function ReceptionistPanel({ open, page, onClose }: Props) {
     <section
       ref={panel}
       role="dialog"
+      aria-modal={fullScreen || undefined}
       aria-labelledby={`${id}-title`}
       aria-describedby={`${id}-role`}
       hidden={!open}
@@ -178,7 +191,10 @@ export default function ReceptionistPanel({ open, page, onClose }: Props) {
           <IconButton
             label="Read replies aloud"
             pressed={voiceOn}
-            onClick={() => setVoiceOn((on) => !on)}
+            onClick={() => {
+              if (!voiceOn) unlockSpeech()
+              setVoiceOn((on) => !on)
+            }}
           >
             {voiceOn ? <Volume2 className="size-5" /> : <VolumeX className="size-5" />}
           </IconButton>
@@ -212,11 +228,11 @@ export default function ReceptionistPanel({ open, page, onClose }: Props) {
             <button
               key={text}
               type="button"
-              disabled={chat.busy}
+              disabled={chat.busy || dictation.listening}
               onClick={() => {
                 // The suggestions disappear once one is sent, so keep focus in the chat.
                 input.current?.focus({ preventScroll: true })
-                void send(text)
+                send(text)
               }}
               className="rounded-full border border-brand-cyan/40 bg-brand-cyan/5 px-3 py-1.5 text-left text-sm text-mist-100 transition hover:border-brand-cyan hover:bg-brand-cyan/10 disabled:opacity-50"
             >

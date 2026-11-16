@@ -12,6 +12,9 @@ interface StoredChat {
   page: string
 }
 
+/** Id prefix of the "You're now on…" notes. */
+const PAGE_NOTE = 'page'
+
 /** Saved answers appear after a short pause, like a reply being typed. */
 const SAVED_REPLY_DELAY = 700
 /** A reply cut off after this many characters is kept, with a note, instead of being replaced by a saved answer. */
@@ -45,12 +48,16 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
   useEffect(() => () => controller.current?.abort(), [])
 
   // Moving to another page: refresh the greeting if nothing was asked yet, otherwise add a note.
+  // Several moves in a row (for example while the chat is closed) leave one note, for the latest page.
   useEffect(() => {
     setChat((current) => {
       if (current.page === page) return current
       const asked = current.messages.some((m) => m.role === 'user')
       if (!asked) return { messages: [greeting(page)], page }
-      return { messages: [...current.messages, { id: uid('note'), role: 'note', text: pageNote(page) }], page }
+      const messages = [...current.messages]
+      if (messages[messages.length - 1]?.id.startsWith(PAGE_NOTE)) messages.pop()
+      messages.push({ id: uid(PAGE_NOTE), role: 'note', text: pageNote(page) })
+      return { messages, page }
     })
   }, [page, setChat])
 
@@ -82,6 +89,7 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
             },
           },
         )
+        if (abort.signal.aborted) return
         const reply = cleanReply(streamed).trim()
         if (result.ok) {
           added.push({ id: replyId, role: 'assistant', text: reply, source: 'ai' })
@@ -110,7 +118,14 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
         }
       }
 
-      setChat((current) => ({ messages: [...current.messages, ...added], page: current.page }))
+      // Right after the question, so a page note added while the reply was arriving stays below it.
+      setChat((current) => {
+        const at = current.messages.findIndex((m) => m.id === question.id)
+        if (at < 0) return { messages: [...current.messages, ...added], page: current.page }
+        const messages = [...current.messages]
+        messages.splice(at + 1, 0, ...added)
+        return { messages, page: current.page }
+      })
       const reply = added.filter((m) => m.role === 'assistant').pop()
       if (reply) replyCallback.current(reply.text)
     },
