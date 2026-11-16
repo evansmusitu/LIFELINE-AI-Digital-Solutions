@@ -12,6 +12,7 @@ import { DEMOS, type DemoMeta } from '../demos/registry'
 import { paths, scrollToSection } from '../lib/router'
 import { clearDemoStorage } from '../lib/storage'
 import { demoQuoteMessage } from '../lib/whatsapp'
+import { AskAiButton } from '../receptionist/launchers'
 
 export function DemoPage({ demo }: { demo: DemoMeta }) {
   const [resetKey, setResetKey] = useState(0)
@@ -133,7 +134,10 @@ export function DemoPage({ demo }: { demo: DemoMeta }) {
                 around your brand, products and team.
               </span>
             </p>
-            <WhatsAppButton message={quote} label="Get a quote for this demo" size="sm" className="shrink-0 max-md:hidden" />
+            <div className="flex shrink-0 gap-2 max-md:hidden">
+              <AskAiButton variant="secondary" size="sm" label="Ask our AI about it" />
+              <WhatsAppButton message={quote} label="Get a quote for this demo" size="sm" />
+            </div>
           </div>
         </div>
       </section>
@@ -151,6 +155,7 @@ export function DemoPage({ demo }: { demo: DemoMeta }) {
           <LayoutGrid className="size-5" aria-hidden="true" />
         </LinkButton>
         <ShareIconButton demo={demo} />
+        <AskAiButton variant="secondary" label="Ask our AI about this demo" iconOnly />
         <WhatsAppButton
           message={quote}
           label="Get a quote for this demo"
@@ -253,7 +258,10 @@ function BuildPlan({ demo, quote }: { demo: DemoMeta; quote: string }) {
               </li>
             ))}
           </ul>
-          <WhatsAppButton message={quote} label="Get a quote for this demo" size="lg" className="mt-8" />
+          <div className="mt-8 flex flex-wrap gap-3">
+            <WhatsAppButton message={quote} label="Get a quote for this demo" size="lg" />
+            <AskAiButton variant="secondary" size="lg" label="Ask our AI about this build" />
+          </div>
         </div>
 
         <ol className="space-y-4">

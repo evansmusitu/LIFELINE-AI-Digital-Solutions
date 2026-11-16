@@ -4,12 +4,14 @@ import { Button, LinkButton, WhatsAppButton } from '../components/Button'
 import { LogoBadge } from '../components/Logo'
 import { MobileCtaBar } from '../components/MobileCtaBar'
 import { WhatsAppIcon } from '../components/WhatsAppIcon'
+import { ABOUT, PRINCIPLES, PROCESS_STEPS } from '../config/about'
 import { SERVICES, SITE } from '../config/site'
 import { DEMOS, INDUSTRIES, type DemoMeta, type Industry } from '../demos/registry'
 import { cn } from '../lib/cn'
 import { EMAIL_ENQUIRY_URL } from '../lib/email'
 import { paths } from '../lib/router'
 import { GENERAL_ENQUIRY, demoRequestMessage, enquiryMessage, openWhatsApp, whatsappUrl } from '../lib/whatsapp'
+import { AskAiButton, ReceptionistLauncher } from '../receptionist/launchers'
 
 export function HomePage() {
   return (
@@ -18,11 +20,13 @@ export function HomePage() {
       <Gallery />
       <About />
       <Contact />
+      <ReceptionistLauncher />
       <MobileCtaBar>
-        <LinkButton href={paths.contact} variant="secondary" className="shrink-0 px-4!">
-          Enquire
+        <LinkButton href={paths.contact} variant="secondary" className="size-11 shrink-0 px-0!" aria-label="Send an enquiry">
+          <FileText className="size-5" aria-hidden="true" />
         </LinkButton>
-        <WhatsAppButton message={GENERAL_ENQUIRY} label="Chat on WhatsApp" className="min-w-0 flex-1 px-4!" />
+        <AskAiButton variant="secondary" label="Ask AI" className="shrink-0 px-4!" />
+        <WhatsAppButton message={GENERAL_ENQUIRY} label="WhatsApp" className="min-w-0 flex-1 px-4!" />
       </MobileCtaBar>
     </>
   )
@@ -61,11 +65,12 @@ function Hero() {
             Click through working demos of the chatbots, automations and business systems we build. Each one runs on
             sample data, so you can explore freely and picture it with your own brand.
           </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <LinkButton href={paths.demos} size="lg">
               Explore the demos
               <ArrowRight className="size-4" aria-hidden="true" />
             </LinkButton>
+            <AskAiButton variant="secondary" size="lg" label="Ask our AI receptionist" />
             <WhatsAppButton variant="secondary" size="lg" message={GENERAL_ENQUIRY} label="Chat on WhatsApp" />
           </div>
           <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-mist-300">
@@ -269,32 +274,9 @@ function DemoCard({ demo }: { demo: DemoMeta }) {
 }
 
 /*
- * About section, from LIFELINE's own "Meet LIFELINE" text (15 November 2026), shortened for the page.
+ * About section. The text lives in src/config/about.ts, which the AI receptionist also answers from.
  * Only facts LIFELINE has given: no testimonials, client names or figures (brief, section 5).
  */
-
-const PRINCIPLES = [
-  [
-    'Try it before you invest.',
-    'Working demos and prototypes show what your solution could look like before you commit to a bigger project.',
-  ],
-  [
-    'Your problem comes first.',
-    'Not every problem needs AI. Sometimes a clear website, an FAQ assistant or a simple automation is the better fix.',
-  ],
-  [
-    'Scope and price agreed up front.',
-    'Deliverables, milestones, revisions, price and any outside service costs are agreed before work starts.',
-  ],
-  [
-    'Honest about what’s real.',
-    'We tell you what’s a demo, what’s working, and what needs extra integrations, hosting or testing.',
-  ],
-  [
-    'You stay in control.',
-    'We show you how to use and maintain what we build, and hand over the agreed source files and documentation.',
-  ],
-] as const
 
 function About() {
   const { founder } = SITE
@@ -313,12 +295,10 @@ function About() {
             </h2>
             <p className="mt-4 text-mist-200 sm:text-lg">
               {SITE.brand} is led by its founder, {founder.name}, a technology entrepreneur and developer based in
-              Zimbabwe. We make professional websites, automation and practical business technology accessible to
-              entrepreneurs, growing companies and organizations, in Zimbabwe and worldwide.
+              Zimbabwe. {ABOUT.summary}
             </p>
             <p className="mt-4 text-mist-200 sm:text-lg">
-              Our view is simple: technology should do more than look impressive. It should solve a real problem,
-              improve your customers’ experience and make your business easier to run.
+              Our view is simple: {ABOUT.view}
             </p>
 
             <div className="mt-8 flex gap-4 rounded-2xl border border-white/10 bg-ink-950 p-5">
@@ -331,14 +311,11 @@ function About() {
               <div>
                 <p className="font-display font-semibold text-white">{founder.name}</p>
                 <p className="text-sm font-medium text-brand-cyan">{founder.role}</p>
-                <p className="mt-2 text-sm text-mist-300">
-                  Oversees planning, development, technical decisions and client communication.
-                </p>
+                <p className="mt-2 text-sm text-mist-300">{ABOUT.founderDuties}</p>
               </div>
             </div>
             <p className="mt-3 text-xs leading-relaxed text-mist-400">
-              {founder.name} also leads MUSITU Intelligence, which builds AI research and financial intelligence tools.
-              That’s why our email address ends in mftintelligence.com.
+              {founder.name} {ABOUT.musitu} That’s why our email address ends in mftintelligence.com.
             </p>
           </div>
 
@@ -428,11 +405,7 @@ function Contact() {
           </p>
 
           <ol className="mt-10 space-y-4">
-            {[
-              ['Tell us about your business', 'What you sell, who your customers are and what takes up your team’s time.'],
-              ['Get a clear plan', 'We suggest the right solution, a timeline and a quote. No jargon.'],
-              ['We build, launch and support it', 'You see progress every week, and we stay on hand after launch.'],
-            ].map(([title, detail], index) => (
+            {PROCESS_STEPS.map(([title, detail], index) => (
               <li key={title} className="flex gap-4">
                 <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand-gradient font-display text-sm font-bold text-ink-950">
                   {index + 1}
