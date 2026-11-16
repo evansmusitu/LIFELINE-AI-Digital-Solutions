@@ -1,12 +1,5 @@
-import {
-  KNOWLEDGE_PATH,
-  LIMITS,
-  type ChatTurn,
-  type Knowledge,
-  type KnowledgeDemo,
-  type NoReply,
-  type ReceptionistRequest,
-} from '../src/receptionist/protocol'
+import { LIMITS, type ChatTurn, type NoReply, type ReceptionistRequest } from '../src/receptionist/protocol'
+import { BASE_HEADERS, isRecord, json, loadKnowledge, pageName, readBody, rejectRequest, requestNetwork, visitorId } from './http'
 import type { ChatLimiter } from './limiter'
 import { systemPrompt } from './prompt'
 import { replyStream } from './stream'
@@ -41,59 +34,9 @@ export const LIMITS_PER = {
 /** Characters of conversation history sent to the model. Older messages are dropped first. */
 const MAX_HISTORY_CHARS = 5000
 
-/** The key for a network: the IPv4 address, or the first four groups (the /64) of an IPv6 address. */
-export function networkKey(ip: string): string {
-  // IPv4, including IPv4 written as IPv6 (::ffff:203.0.113.9).
-  if (ip.includes('.')) return ip.slice(ip.lastIndexOf(':') + 1)
-  if (!ip.includes(':')) return ip
-  const [head, tail = ''] = ip.toLowerCase().split('::')
-  const left = head ? head.split(':') : []
-  const right = ip.includes('::') && tail ? tail.split(':') : []
-  const groups = ip.includes('::') ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill('0'), ...right] : left
-  return `${groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':')}::/64`
-}
-
-const BASE_HEADERS = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }
-
-function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...BASE_HEADERS, 'content-type': 'application/json; charset=utf-8', ...headers },
-  })
-}
-
 function noReply(reason: NoReply['reason'], status = 200): Response {
   const body: NoReply = { type: 'fallback', reason }
   return json(body, status)
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
-
-/** Reads at most `max` bytes. Returns null when the body is larger. */
-async function readBody(request: Request, max: number): Promise<string | null> {
-  const declared = Number(request.headers.get('content-length') ?? '0')
-  if (declared > max) return null
-  if (!request.body) return ''
-  const reader = request.body.getReader()
-  const chunks: Uint8Array[] = []
-  let size = 0
-  for (;;) {
-    const { done, value } = await reader.read()
-    if (done) break
-    size += value.byteLength
-    if (size > max) {
-      await reader.cancel()
-      return null
-    }
-    chunks.push(value)
-  }
-  const bytes = new Uint8Array(size)
-  let offset = 0
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset)
-    offset += chunk.byteLength
-  }
-  return new TextDecoder().decode(bytes)
 }
 
 /** Checks the request and keeps the latest messages, starting with a visitor message and alternating roles. */
@@ -129,40 +72,10 @@ export function parseRequest(raw: string): ReceptionistRequest | null {
   while (recent.length && recent[0].role !== 'user') recent = recent.slice(1)
   if (recent.length === 0 || recent[recent.length - 1].role !== 'user') return null
 
-  const page = typeof data.page === 'string' && /^[a-z0-9-]{1,60}$/.test(data.page) ? data.page : 'home'
-  const visitor = typeof data.visitor === 'string' && /^[A-Za-z0-9_-]{8,40}$/.test(data.visitor) ? data.visitor : ''
+  const page = pageName(data.page)
+  const visitor = visitorId(data.visitor)
   const model = typeof data.model === 'string' ? data.model : undefined
   return { messages: recent, page, visitor, model }
-}
-
-function isKnowledgeDemo(value: unknown): value is KnowledgeDemo {
-  return (
-    isRecord(value) &&
-    typeof value.slug === 'string' &&
-    typeof value.title === 'string' &&
-    typeof value.summary === 'string' &&
-    typeof value.timeline === 'string' &&
-    Array.isArray(value.industries) &&
-    Array.isArray(value.services)
-  )
-}
-
-let knowledgeCache: Promise<Knowledge | null> | undefined
-
-/** The demo list, from the same build as the pages. Cached for the life of this Worker instance. */
-async function loadKnowledge(env: Env, origin: string): Promise<Knowledge> {
-  knowledgeCache ??= env.ASSETS.fetch(new URL(KNOWLEDGE_PATH, origin))
-    .then(async (res) => {
-      if (!res.ok) return null
-      const data: unknown = await res.json()
-      if (!isRecord(data) || !Array.isArray(data.demos)) return null
-      return { demos: data.demos.filter(isKnowledgeDemo) }
-    })
-    .catch(() => null)
-  const knowledge = await knowledgeCache
-  // Try again on the next request rather than answering without demos for the rest of this instance's life.
-  if (!knowledge) knowledgeCache = undefined
-  return knowledge ?? { demos: [] }
 }
 
 /** Workers AI error codes: 4006 = daily free allocation used up, 3040 = out of capacity. */
@@ -180,21 +93,17 @@ export async function handleReceptionist(
   env: Env,
   limiter: DurableObjectNamespace<ChatLimiter>,
 ): Promise<Response> {
-  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, { allow: 'POST' })
-
+  // POST from this site's own pages only, so other websites can't spend its allowance.
+  const rejected = rejectRequest(request)
+  if (rejected) return rejected
   const url = new URL(request.url)
-  // Only this site's pages may use the receptionist, so other websites can't spend its allowance.
-  if (request.headers.get('origin') !== url.origin) return json({ error: 'forbidden' }, 403)
-  if (!(request.headers.get('content-type') ?? '').toLowerCase().startsWith('application/json')) {
-    return json({ error: 'unsupported_media_type' }, 415)
-  }
 
   const raw = await readBody(request, LIMITS.bodyBytes)
   if (raw === null) return json({ error: 'too_large' }, 413)
   const chat = parseRequest(raw)
   if (!chat) return json({ error: 'bad_request' }, 400)
 
-  const network = networkKey(request.headers.get('cf-connecting-ip') ?? 'unknown')
+  const network = requestNetwork(request)
   try {
     // Visitor first, so a visitor over their own limit doesn't use up their network's.
     const visitorKey = `visitor:${chat.visitor || network}`

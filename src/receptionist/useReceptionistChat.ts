@@ -132,6 +132,14 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
     [chat.messages, page, setChat, visitor],
   )
 
+  /** Adds what was said on a video call, so the chat and the WhatsApp summary include it. */
+  const addCallRecord = useCallback(
+    (record: ChatMessage[]) => {
+      if (record.length) setChat((current) => ({ messages: [...current.messages, ...record], page: current.page }))
+    },
+    [setChat],
+  )
+
   const restart = useCallback(() => {
     controller.current?.abort()
     controller.current = null
@@ -145,7 +153,9 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
     busy: pending !== null,
     limitReached: visitorCount >= MAX_VISITOR_MESSAGES,
     asked: visitorCount > 0,
+    visitor,
     send,
+    addCallRecord,
     restart,
   }
 }

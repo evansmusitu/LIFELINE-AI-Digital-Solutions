@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, runnerImport, type Plugin } from 'vite'
@@ -144,10 +145,19 @@ function studioPages(): Plugin {
   }
 }
 
+const noFaceTracking = fileURLToPath(new URL('./src/receptionist/video/no-face-tracking.ts', import.meta.url))
+
 // https://vite.dev/config/
 export default defineConfig({
   // Root-relative asset paths, so /demos/<slug> pages load the same files as the home page.
   // The site must be served from the root of its address.
   base: '/',
   plugins: [react(), tailwindcss(), studioPages()],
+  resolve: {
+    alias: {
+      // The video call SDK loads these only for face tracking, which the site leaves off.
+      '@tensorflow/tfjs': noFaceTracking,
+      '@tensorflow-models/face-landmarks-detection': noFaceTracking,
+    },
+  },
 })

@@ -7,8 +7,8 @@
 	// pull request Preview its own workers.dev link.
 	"workers_dev": true,
 	"preview_urls": true,
-	// The Worker script answers /api/* only (the AI receptionist). Every other request is a
-	// static file from the Vite build, which Cloudflare serves free and without a request limit.
+	// The Worker script answers /api/* only (the AI receptionist and video calls). Every other
+	// request is a static file from the Vite build, which Cloudflare serves free and without a limit.
 	"main": "worker/index.ts",
 	"assets": {
 		"directory": "./dist",
@@ -21,21 +21,41 @@
 	// Workers AI. On the Workers Free plan it includes 10,000 Neurons a day. Past that, calls
 	// fail instead of being billed, and the receptionist switches to its saved answers.
 	"ai": { "binding": "AI" },
-	// Message limits per minute and per day (worker/limiter.ts), so one visitor or one network can't
-	// use up the day's free AI allowance. The Workers Free plan only allows SQLite-backed classes.
-	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatLimiter"] }],
+	// ChatLimiter: message limits per minute and per day (worker/limiter.ts), so one visitor or one
+	// network can't use up the day's free AI allowance. VideoCalls: starts and ends video calls and
+	// keeps them inside the limits below (worker/video-calls.ts). The Workers Free plan only allows
+	// SQLite-backed classes.
+	"migrations": [
+		{ "tag": "v1", "new_sqlite_classes": ["ChatLimiter"] },
+		{ "tag": "v2", "new_sqlite_classes": ["VideoCalls"] },
+	],
+	// The Napster API key is the secret NAPSTER_API_KEY, set in Cloudflare, not here.
 	"vars": {
 		"AI_MODEL": "@cf/google/gemma-4-26b-a4b-it",
 		// "true" lets a request pick another model from the list in worker/receptionist.ts. Previews only.
 		"ALLOW_MODEL_CHOICE": "false",
+		// Video calls with Tari. Created by scripts/napster-setup.mjs.
+		"NAPSTER_AGENT_ID": "8c898d9e-1056-4587-8972-7dde8ea92856",
+		// Total Napster spend allowed, across the live site, Previews and tests together. "0" turns calls off.
+		"VIDEO_BUDGET_USD": "40",
+		"VIDEO_CALLS_PER_DAY": "20",
+		"VIDEO_CALL_SECONDS": "180",
+		"VIDEO_PRICE_PER_MINUTE": "0.0583",
 	},
 	// Worker Previews (pull request preview links) don't inherit the settings above, so they are
-	// repeated here. Each Preview gets its own ChatLimiter objects automatically.
+	// repeated here. Each Preview gets its own Durable Objects automatically. Previews use their own
+	// Napster agent, so testing changed instructions never touches the live site's agent. Spend and
+	// daily calls are counted from Napster's records, so they are shared with the live site.
 	"previews": {
 		"ai": { "binding": "AI" },
 		"vars": {
 			"AI_MODEL": "@cf/google/gemma-4-26b-a4b-it",
 			"ALLOW_MODEL_CHOICE": "true",
+			"NAPSTER_AGENT_ID": "bc89d6ff-e2d8-4a1e-8cf1-536f4ace96a5",
+			"VIDEO_BUDGET_USD": "40",
+			"VIDEO_CALLS_PER_DAY": "20",
+			"VIDEO_CALL_SECONDS": "180",
+			"VIDEO_PRICE_PER_MINUTE": "0.0583",
 		},
 	},
 }
