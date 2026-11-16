@@ -159,6 +159,8 @@ export async function handleReceptionist(request: Request, env: Env): Promise<Re
   if (!chat) return json({ error: 'bad_request' }, 400)
 
   const network = request.headers.get('cf-connecting-ip') ?? 'unknown'
+  // Reported in a response header, so a check of the live site can see whether the limits are working.
+  let limits = 'checked'
   try {
     const [byNetwork, byVisitor] = await Promise.all([
       env.CHAT_NETWORK_LIMIT.limit({ key: network }),
@@ -167,6 +169,7 @@ export async function handleReceptionist(request: Request, env: Env): Promise<Re
     if (!byNetwork.success || !byVisitor.success) return noReply('limited', 429)
   } catch (error) {
     // A rate limiter outage shouldn't take the receptionist down. The daily AI allowance still caps use.
+    limits = 'unavailable'
     console.warn('receptionist: rate limit check failed', error instanceof Error ? error.message : String(error))
   }
 
@@ -192,6 +195,11 @@ export async function handleReceptionist(request: Request, env: Env): Promise<Re
   }
 
   return new Response(upstream.pipeThrough(replyStream()), {
-    headers: { ...BASE_HEADERS, 'content-type': 'application/x-ndjson; charset=utf-8', 'x-receptionist-model': model },
+    headers: {
+      ...BASE_HEADERS,
+      'content-type': 'application/x-ndjson; charset=utf-8',
+      'x-receptionist-model': model,
+      'x-receptionist-limits': limits,
+    },
   })
 }
