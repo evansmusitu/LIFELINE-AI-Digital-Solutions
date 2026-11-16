@@ -18,7 +18,7 @@ export function demoShareUrl(demo: SharedDemo): string {
 
 /** Text that goes with the link. The link goes last, so WhatsApp shows its preview card. */
 export function demoShareText(demo: SharedDemo): string {
-  return `Have a look at this live demo from ${SITE.brand}: ${demo.title}. You can try it on your phone, no sign-up needed.`
+  return `Have a look at this live demo from ${SITE.brand}: ${demo.title}. You can try it on your phone, no sign-up needed, and talk to their AI receptionist by chat or video call.`
 }
 
 /** Opens WhatsApp so the visitor can pick any chat or group. No phone number, unlike the enquiry links. */

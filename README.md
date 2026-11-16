@@ -73,12 +73,13 @@ Another static host works if it serves `demos/<slug>.html` at `/demos/<slug>` an
 
 | File | Size | Used for |
 |---|---|---|
-| `src/assets/logo-badge.jpg` | 480 px, 34 KB | Full badge on the home page |
 | `src/assets/logo-mark.png` | 128 px, 15 KB | The "L" icon alone on a navy disc: header, footer, "Powered by" bars, browser tab icon |
-| `public/og-image.jpg` | 1200 × 630, 90 KB | Link preview on WhatsApp, Facebook, LinkedIn and X |
+| `public/og-image.jpg` | 1200 × 630, 91 KB | Link preview on WhatsApp, Facebook, LinkedIn and X: Tari's photo, the "L" icon and the name |
 
 At small sizes the site uses only the "L" icon, with the name in live text, because the thin "AI CONCIERGE"
-lettering is unreadable below about 120 px. If the logo changes, regenerate all three copies.
+lettering is unreadable below about 120 px. If the logo changes, regenerate both copies. When `og-image.jpg`
+changes, raise the `?v=` number on its `og:image` tag in `index.html`, so apps that cached the old image fetch the
+new one.
 
 If the site moves to another address, change `url` in `src/config/site.ts`. Link previews, canonical links and the
 sitemap all use it.

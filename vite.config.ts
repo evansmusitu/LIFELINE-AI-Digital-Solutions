@@ -9,8 +9,7 @@ interface SiteInfo {
   url: string
   brand: string
   description: string
-  headline: string
-  headlineCta: string
+  previewDescription: string
 }
 
 interface DemoInfo {
@@ -50,7 +49,7 @@ function homeMeta(site: SiteInfo): PageMeta {
   return {
     title: `${site.brand} | Demo Studio`,
     description: site.description,
-    previewDescription: `${site.headline} ${site.headlineCta}`,
+    previewDescription: site.previewDescription,
     url: `${site.url}/`,
   }
 }
