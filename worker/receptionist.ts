@@ -27,10 +27,31 @@ const DEFAULT_MODEL = '@cf/google/gemma-4-26b-a4b-it'
 
 const MAX_REPLY_TOKENS = 400
 
-/** Messages a minute: per visitor (the random ID kept in their browser), and per network, which many phones can share. */
-export const VISITOR_LIMIT = 8
-export const NETWORK_LIMIT = 30
-const LIMIT_WINDOW_MS = 60_000
+/*
+ * Message limits per visitor (the random ID kept in their browser) and per network (IPv4 address, or
+ * IPv6 /64, which many phones on one mobile network can share). The daily caps stop one script from
+ * using up the day's free AI allowance (roughly 400 replies) for everyone. Scripts spread over many
+ * networks would still need a bot check such as Turnstile.
+ */
+export const LIMITS_PER = {
+  visitor: { minute: 8, day: 40 },
+  network: { minute: 30, day: 150 },
+} as const
+
+/** Characters of conversation history sent to the model. Older messages are dropped first. */
+const MAX_HISTORY_CHARS = 5000
+
+/** The key for a network: the IPv4 address, or the first four groups (the /64) of an IPv6 address. */
+export function networkKey(ip: string): string {
+  // IPv4, including IPv4 written as IPv6 (::ffff:203.0.113.9).
+  if (ip.includes('.')) return ip.slice(ip.lastIndexOf(':') + 1)
+  if (!ip.includes(':')) return ip
+  const [head, tail = ''] = ip.toLowerCase().split('::')
+  const left = head ? head.split(':') : []
+  const right = ip.includes('::') && tail ? tail.split(':') : []
+  const groups = ip.includes('::') ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill('0'), ...right] : left
+  return `${groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':')}::/64`
+}
 
 const BASE_HEADERS = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }
 
@@ -91,15 +112,20 @@ export function parseRequest(raw: string): ReceptionistRequest | null {
       return null
     }
     const content = item.content.trim()
-    const max = item.role === 'user' ? LIMITS.visitorChars : LIMITS.replyChars
-    if (!content || content.length > max) return null
+    if (!content) return null
     const last = turns[turns.length - 1]
     // Chat models expect user and assistant turns to alternate. Join two in a row.
     if (last?.role === item.role) last.content += `\n${content}`
     else turns.push({ role: item.role, content })
   }
+  // Checked after joining, so splitting a long message into several doesn't get round the limit.
+  for (const turn of turns) {
+    if (turn.content.length > (turn.role === 'user' ? LIMITS.visitorChars : LIMITS.replyChars)) return null
+  }
 
   let recent = turns.slice(-LIMITS.historyMessages)
+  const size = () => recent.reduce((total, turn) => total + turn.content.length, 0)
+  while (recent.length > 1 && size() > MAX_HISTORY_CHARS) recent = recent.slice(1)
   while (recent.length && recent[0].role !== 'user') recent = recent.slice(1)
   if (recent.length === 0 || recent[recent.length - 1].role !== 'user') return null
 
@@ -168,25 +194,27 @@ export async function handleReceptionist(
   const chat = parseRequest(raw)
   if (!chat) return json({ error: 'bad_request' }, 400)
 
-  const network = request.headers.get('cf-connecting-ip') ?? 'unknown'
-  // Reported in a response header, so a check of the live site can see whether the limits are working.
-  let limits = 'checked'
+  const network = networkKey(request.headers.get('cf-connecting-ip') ?? 'unknown')
   try {
-    const [byNetwork, byVisitor] = await Promise.all([
-      limiter.getByName(`network:${network}`).allow(NETWORK_LIMIT, LIMIT_WINDOW_MS),
-      limiter.getByName(`visitor:${chat.visitor || network}`).allow(VISITOR_LIMIT, LIMIT_WINDOW_MS),
-    ])
-    if (!byNetwork || !byVisitor) return noReply('limited', 429)
+    // Visitor first, so a visitor over their own limit doesn't use up their network's.
+    const visitorKey = `visitor:${chat.visitor || network}`
+    if (!(await limiter.getByName(visitorKey).allow(LIMITS_PER.visitor.minute, LIMITS_PER.visitor.day))) {
+      return noReply('limited', 429)
+    }
+    if (!(await limiter.getByName(`network:${network}`).allow(LIMITS_PER.network.minute, LIMITS_PER.network.day))) {
+      return noReply('limited', 429)
+    }
   } catch (error) {
-    // A rate limiter outage shouldn't take the receptionist down. The daily AI allowance still caps use.
-    limits = 'unavailable'
+    // Without the limiter nothing protects the day's allowance, so answer from saved replies instead.
     console.warn('receptionist: rate limit check failed', error instanceof Error ? error.message : String(error))
+    return noReply('busy')
   }
 
   const knowledge = await loadKnowledge(env, url.origin)
   const page = knowledge.demos.some((d) => d.slug === chat.page) ? chat.page : 'home'
-  const configured = env.AI_MODEL in MODELS ? env.AI_MODEL : DEFAULT_MODEL
-  const model = env.ALLOW_MODEL_CHOICE === 'true' && chat.model && chat.model in MODELS ? chat.model : configured
+  const configured = Object.hasOwn(MODELS, env.AI_MODEL) ? env.AI_MODEL : DEFAULT_MODEL
+  const model =
+    env.ALLOW_MODEL_CHOICE === 'true' && chat.model && Object.hasOwn(MODELS, chat.model) ? chat.model : configured
 
   let upstream: ReadableStream<Uint8Array>
   try {
@@ -209,7 +237,6 @@ export async function handleReceptionist(
       ...BASE_HEADERS,
       'content-type': 'application/x-ndjson; charset=utf-8',
       'x-receptionist-model': model,
-      'x-receptionist-limits': limits,
     },
   })
 }

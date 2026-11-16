@@ -95,10 +95,14 @@ their questions filled in.
   billed.
 - **Saved answers.** When there is no AI reply (allowance used up, too many messages, offline or an error), the browser
   answers from `src/receptionist/fallback.ts` and labels it "Saved answer". The chat never stops working.
-- **Limits.** 8 messages a minute per visitor and 30 per network, counted exactly by a small Durable Object
-  (`worker/limiter.ts`, included in the Free plan). Also: messages up to 500 characters, the last 10 messages sent as
-  history, and requests only from the site's own pages. Cloudflare's built-in Rate Limiting binding was tried first,
-  but it is approximate per location and in testing let every request through.
+- **Limits.** Per visitor: 8 messages a minute and 40 a day. Per network (an IPv4 address, or an IPv6 /64, which
+  many phones on one mobile network can share): 30 a minute and 150 a day. A small Durable Object counts them exactly
+  (`worker/limiter.ts`, included in the Free plan); Cloudflare's Rate Limiting binding was tried first, but in
+  testing it let every request through. If the limiter fails, visitors get saved answers rather than unprotected AI
+  calls. Messages are capped at 500 characters (also after joining several), with the last 10 messages and at most
+  5,000 characters of history sent. Only the site's own pages are accepted, which stops other websites but not a
+  script that fakes the header: the daily caps limit what one network can use, and a bot check (Turnstile) would be
+  the next step if scripts spread across many networks start using up the allowance.
 - **Voice.** "Read replies aloud" uses the phone's built-in voice. Voice typing uses the browser's speech service and
   only shows where the browser supports it (Chrome, Edge, Safari).
 - **Privacy.** Messages go to Workers AI to write each reply. The production model has zero data retention, and
