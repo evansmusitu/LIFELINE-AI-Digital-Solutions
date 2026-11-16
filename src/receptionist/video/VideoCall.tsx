@@ -41,7 +41,7 @@ const PROBLEMS: Record<Problem, string> = {
   off: 'Video calls aren’t available right now. Keep chatting here, or continue on WhatsApp.',
   error: 'Video calls aren’t available right now. Keep chatting here, or continue on WhatsApp.',
   failed: 'The call couldn’t connect. Check your internet connection and try again.',
-  mic: `${RECEPTIONIST_NAME} needs your microphone to hear you. Allow it when your browser asks, then try again.`,
+  mic: `${RECEPTIONIST_NAME} needs your microphone to hear you. Allow microphone access for this site, then try again.`,
 }
 
 const ENDINGS = {
@@ -97,6 +97,8 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
   const instance = useRef<NapsterCompanionApiInstance | null>(null)
   const call = useRef<{ callId: string; endKey: string; maxSeconds: number } | null>(null)
   const unavailable = useRef<VideoUnavailableReason | null>(null)
+  /** The SDK asks for a token only once the microphone works, so an error before that is a microphone problem. */
+  const tokenAsked = useRef(false)
   const startedAt = useRef<number | null>(null)
   const timer = useRef<number | null>(null)
   const wrapped = useRef(false)
@@ -224,6 +226,7 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
     teardown()
     finished.current = false
     unavailable.current = null
+    tokenAsked.current = false
     startedAt.current = null
     wrapped.current = false
     inactive.current = false
@@ -254,6 +257,7 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
     try {
       instance.current = await NapsterCompanionApiSdk.init(
         async () => {
+          tokenAsked.current = true
           const result = await startVideoCall({ page, visitor })
           if (result.type !== 'ok') {
             unavailable.current = result.reason
@@ -292,12 +296,12 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
             nameMediaSession()
           },
           onData: onEvent,
-          onError: () => fail(unavailable.current ?? 'failed'),
+          onError: () => fail(unavailable.current ?? (tokenAsked.current ? 'failed' : 'mic')),
         },
       )
       if (finished.current) teardown()
     } catch {
-      fail(unavailable.current ?? 'failed')
+      fail(unavailable.current ?? (tokenAsked.current ? 'failed' : 'mic'))
     }
   }
 
