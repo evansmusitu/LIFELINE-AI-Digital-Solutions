@@ -267,7 +267,9 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
             else if (next === 'permissionDismissed') fail('mic')
             else if (next === 'entry' && phaseRef.current === 'live') finish('dropped')
           },
-          onAvatarReady: () => {
+          // The SDK also calls this with false while it shuts down, which isn't the call going live.
+          onAvatarReady: (ready) => {
+            if (ready === false) return
             goLive()
             nameMediaSession()
           },
