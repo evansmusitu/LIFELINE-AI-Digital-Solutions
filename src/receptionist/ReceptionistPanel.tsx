@@ -103,6 +103,11 @@ export default function ReceptionistPanel({ open, page, onClose }: Props) {
     return () => document.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
+  const items: { message: ChatMessage; streaming: boolean }[] = chat.messages.map((message) => ({ message, streaming: false }))
+  if (chat.pending) {
+    items.push({ message: { id: chat.pending.id, role: 'assistant', text: chat.pending.text, source: 'ai' }, streaming: true })
+  }
+
   const lastText = chat.pending?.text
   useLayoutEffect(() => {
     const box = log.current
@@ -187,15 +192,14 @@ export default function ReceptionistPanel({ open, page, onClose }: Props) {
       </header>
 
       <div ref={log} aria-label="Conversation" role="region" className="relative flex-1 space-y-3 overflow-y-auto px-4 py-4">
-        {chat.messages.map((message) => (
-          <Bubble key={message.id} message={message} onDemoLink={onDemoLink} />
-        ))}
-        {chat.pending &&
-          (chat.pending.text ? (
-            <Bubble message={{ id: 'pending', role: 'assistant', text: chat.pending.text, source: 'ai' }} onDemoLink={onDemoLink} streaming />
+        {/* One list, so the streaming bubble and the finished reply (same id) stay the same element. */}
+        {items.map(({ message, streaming }) =>
+          streaming && !message.text ? (
+            <Typing key={message.id} />
           ) : (
-            <Typing />
-          ))}
+            <Bubble key={message.id} message={message} onDemoLink={onDemoLink} streaming={streaming} />
+          ),
+        )}
       </div>
       {/* Finished replies only, so screen readers don't read every word as it streams in. */}
       <p className="sr-only" aria-live="polite">

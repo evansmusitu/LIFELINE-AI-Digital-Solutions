@@ -33,7 +33,8 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
     { version: 1 },
   )
   const [visitor] = usePersistentState('receptionist.visitor', newVisitorId)
-  const [pending, setPending] = useState<{ text: string } | null>(null)
+  /** The reply on its way. Its id becomes the finished reply's id, so the bubble isn't redrawn when the reply ends. */
+  const [pending, setPending] = useState<{ id: string; text: string } | null>(null)
   const controller = useRef<AbortController | null>(null)
   const replyCallback = useRef(onReply)
 
@@ -65,7 +66,8 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
 
       const abort = new AbortController()
       controller.current = abort
-      setPending({ text: '' })
+      const replyId = uid('tari')
+      setPending({ id: replyId, text: '' })
       let streamed = ''
       const added: ChatMessage[] = []
 
@@ -76,18 +78,18 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
             signal: abort.signal,
             onText: (partial) => {
               streamed = partial
-              setPending({ text: partial })
+              setPending({ id: replyId, text: partial })
             },
           },
         )
         const reply = cleanReply(streamed).trim()
         if (result.ok) {
-          added.push({ id: uid('tari'), role: 'assistant', text: reply, source: 'ai' })
+          added.push({ id: replyId, role: 'assistant', text: reply, source: 'ai' })
         } else if (reply.length >= KEEP_PARTIAL_FROM) {
-          added.push({ id: uid('tari'), role: 'assistant', text: `${reply}…`, source: 'ai' })
+          added.push({ id: replyId, role: 'assistant', text: `${reply}…`, source: 'ai' })
           added.push({ id: uid('note'), role: 'note', text: 'The connection dropped before I finished. Ask again, or continue on WhatsApp.' })
         } else {
-          setPending({ text: '' })
+          setPending({ id: replyId, text: '' })
           await new Promise((resolve) => window.setTimeout(resolve, SAVED_REPLY_DELAY))
           if (abort.signal.aborted) return
           // Explain the switch to saved answers once, and again only if the reason changes.
