@@ -1,4 +1,5 @@
 import { SITE } from '../config/site'
+import { countEvent } from './counts'
 import { paths } from './router'
 
 /*
@@ -40,6 +41,7 @@ export function canUseShareSheet(demo: SharedDemo): boolean {
 export async function openShareSheet(demo: SharedDemo): Promise<'shared' | 'closed' | 'failed'> {
   try {
     await navigator.share(shareData(demo))
+    countEvent('share_sheet')
     return 'shared'
   } catch (error) {
     return error instanceof DOMException && error.name === 'AbortError' ? 'closed' : 'failed'
@@ -50,6 +52,7 @@ export async function openShareSheet(demo: SharedDemo): Promise<'shared' | 'clos
 export async function copyDemoLink(demo: SharedDemo): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(demoShareUrl(demo))
+    countEvent('share_copy')
     return true
   } catch {
     return false

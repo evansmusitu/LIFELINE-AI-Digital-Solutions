@@ -17,8 +17,9 @@ npm run dev       # local development server
 npm run build     # type-check and build the static site into dist/
 npm run preview   # serve the built site locally
 npm run lint      # oxlint
-npm test          # logic tests for the receptionist and video calls (Vitest)
+npm test          # logic tests for the receptionist, video calls and totals (Vitest)
 npm run cf-typegen  # regenerate worker/worker-configuration.d.ts after changing wrangler.jsonc
+npm run stats-passcode  # make a new passcode for the private /stats page
 ```
 
 Every pull request and every merge into `main` runs the **Check** workflow (`.github/workflows/check.yml`): a
@@ -26,7 +27,8 @@ clean `npm ci`, `npm run lint`, `npm test` and `npm run build`, on the Node vers
 the Worker types match `wrangler.jsonc` and that the Worker bundles (`wrangler deploy --dry-run`).
 
 The tests in `test/` cover the parts where a mistake costs money or loses customers: the video call limits and the
-$40 budget, the receptionist's message limits, request checks, saved answers, and the chat and call helpers. They
+$40 budget, the receptionist's message limits, request checks, saved answers, the chat and call helpers, and the
+daily totals with their private page. They
 run the Worker code in Node with `cloudflare:workers` replaced by a stub (`vitest.config.ts`), and the Napster API
 and Workers AI replaced by fakes. Vitest doesn't type-check them. Its pass or fail mark shows on
 the pull request.
@@ -34,7 +36,7 @@ the pull request.
 ## Deploy
 
 The site is hosted on Cloudflare Workers: the static build in `dist/`, plus a small Worker script that answers
-`/api/*` only. Workers Builds builds it from this GitHub repository, and the hosting settings are in `wrangler.jsonc`.
+`/api/*` and `/stats` only. Workers Builds builds it from this GitHub repository, and the hosting settings are in `wrangler.jsonc`.
 Static files are free and unlimited on Cloudflare. The Worker uses the Workers Free plan allowance (100,000 requests a
 day).
 
@@ -149,6 +151,27 @@ ends, what was said is added to the chat, so it goes with the "Continue on Whats
   a v2 avatar, for when Napster switches v2 on for the account. To change the face or voice, edit `COMPANION_ID` and
   `VOICE` in the setup script, run it, and replace `public/tari-video.jpg`.
 
+## Totals
+
+The site counts daily totals, and nothing about who did what: no cookies, and no IDs, addresses or message text are
+kept with them. It counts chats started, AI replies, saved answers (by reason), video calls started, calls turned
+away (by reason), WhatsApp taps (in the chat, on a video call, or on the pages) and demo shares (to WhatsApp, from
+the phone's share menu, or by copying the link). The footer tells visitors.
+
+- **How it works.** The Worker counts chats and calls as it answers them. The browser counts WhatsApp taps and
+  shares (`src/lib/counts.ts`) by posting the event's name to `/api/event`, which takes at most 20 a minute and 300 a
+  day from one network. The `SiteStats` Durable Object (`worker/stats.ts`) keeps one entry per UTC day, for 400 days.
+  A count is added after the reply has gone, and a failed count never breaks the reply.
+- **Cost: $0.** Each count is one Durable Object request, one row read and one row written. A tap or share also goes
+  through the per-network limit, which is one more of each. The Workers Free plan includes 100,000 Durable Object
+  requests and 100,000 rows written a day, shared with the message limiter and video calls.
+- **Reading them.** Open `/stats` on the live site and enter the passcode. The page shows video call spending, the
+  last 14 days and every total since counting began. Previews keep their own totals. Wrong passcodes are limited to
+  10 tries a minute and 60 a day per network.
+- **The passcode.** Only its SHA-256 is in `wrangler.jsonc` (`STATS_PASSCODE_SHA256`), which is safe in a public
+  repository because the passcode is 20 random characters. To change it, run `npm run stats-passcode`, put the new
+  hash in both `vars` and `previews.vars`, and merge. Set it to `""` to remove the page.
+
 ## Where things live
 
 | What | Where |
@@ -159,6 +182,7 @@ ends, what was said is added to the chat, so it goes with the "Continue on Whats
 | AI receptionist: chat panel, saved answers, voice | `src/receptionist/` |
 | AI receptionist: Worker, instructions and facts, rate limits | `worker/`, `wrangler.jsonc` |
 | Video calls: call screen, limits, Napster agents and tool | `src/receptionist/video/`, `worker/video*.ts`, `worker/napster.ts`, `scripts/napster-setup.mjs` |
+| Daily totals: what is counted, the tap counter, the /stats page | `src/lib/count-events.ts`, `src/lib/counts.ts`, `worker/stats*.ts` |
 | Brand colours (confirmed) and fonts | `@theme` in `src/index.css` |
 | Demo list, card text, "Try this" tips, "How we'd build this" timelines | `src/demos/registry.ts` |
 | Studio pages (home, demo page frame, 404) | `src/pages/` |

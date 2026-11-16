@@ -83,6 +83,11 @@ export interface Usage {
   open: number
 }
 
+export interface VideoUsage extends Usage {
+  budgetUsd: number
+  callsPerDay: number
+}
+
 const utcDay = (now: number) => new Date(now).toISOString().slice(0, 10)
 const utcDayStartSeconds = (now: number) => Math.floor(Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth(), new Date(now).getUTCDate()) / 1000)
 
@@ -179,6 +184,18 @@ export class VideoCalls extends DurableObject<Env> {
 
   start(input: StartInput): Promise<VideoStartResponse> {
     return this.serial(() => this.startCall(input))
+  }
+
+  /** Spending and today's calls, for the private totals page (worker/stats-page.ts). Null when calls aren't set up. */
+  async usage(): Promise<VideoUsage | null> {
+    if (!this.key()) return null
+    const limits = videoLimits(this.env)
+    const sessions = await listSessions(this.key())
+    return {
+      ...measureUsage(sessions, Object.values(this.calls), Date.now(), limits),
+      budgetUsd: limits.budgetUsd,
+      callsPerDay: limits.callsPerDay,
+    }
   }
 
   end(callId: string, endKey: string): Promise<boolean> {

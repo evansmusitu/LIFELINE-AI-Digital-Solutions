@@ -67,8 +67,10 @@ export function SiteFooter() {
 
         <div className="mt-10 space-y-3 border-t border-white/10 pt-6 text-xs leading-relaxed text-mist-400">
           <p>
-            <span className="font-semibold text-mist-300">Privacy.</span> This site uses no cookies, analytics or
-            tracking. Anything you type into a demo is saved only in your own browser, so the demo remembers it next
+            <span className="font-semibold text-mist-300">Privacy.</span> This site uses no cookies and doesn’t track
+            you. We count daily totals only, such as how many chats and video calls start and how many WhatsApp buttons
+            are tapped, never who did what. To stop misuse, the chat and video calls are limited per network each day.
+            Anything you type into a demo is saved only in your own browser, so the demo remembers it next
             time, and Reset demo clears it. Chat messages to our AI receptionist are processed by our AI provider to write
             each reply, and aren’t kept or used to train AI. On a video call, your voice is processed by our video call
             provider, which keeps a transcript of what was said. Your conversations with the receptionist are also saved

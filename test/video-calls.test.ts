@@ -4,7 +4,7 @@ import { DEMOS } from '../src/demos/registry'
 import { toKnowledge } from '../src/receptionist/protocol'
 import { billedCost, measureUsage, maxCallCost, refusal, reservation, videoLimits, VideoCalls, GRACE_SECONDS } from '../worker/video-calls'
 import { listSessions } from '../worker/napster'
-import { handleVideo } from '../worker/video'
+import { handleVideo as handle } from '../worker/video'
 import { videoPrompt, videoOpening, systemPrompt } from '../worker/prompt'
 import { readEvent, showDemo, Transcript, callLength, clock, demosMentioned } from '../src/receptionist/video/events'
 
@@ -418,9 +418,13 @@ async function handlerChecks() {
   const env = { ...ENV_BASE, ASSETS: { fetch: async () => Response.json(knowledgeJson) } } as unknown as Env
   const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
     new Request(ORIGIN + path, { method: 'POST', headers: { origin: ORIGIN, 'content-type': 'application/json', 'cf-connecting-ip': '203.0.113.9', ...headers }, body: JSON.stringify(body) })
+  const counted: string[] = []
+  const handleVideo = (req: Request, e: Env, path: string, n: Parameters<typeof handle>[3]) => handle(req, e, path, n, (event) => void counted.push(event))
   let res = await handleVideo(post('/api/video/start', { page: 'salon-spa-booking', visitor: 'visitor1234' }, { origin: 'https://evil.example' }), env, '/api/video/start', ns)
   check('handler: other origin 403', res.status === 403)
+  check('counts: a rejected request counts nothing', counted.length === 0, counted)
   res = await handleVideo(post('/api/video/start', { page: 'salon-spa-booking', visitor: 'visitor1234' }), env, '/api/video/start', ns)
+  check('counts: a started call', counted.join() === 'video_started', counted)
   const body = await res.json()
   const sent = seen[0] as { visitor: string; network: string; page: string; pageTitle: string; instructions: string; opening: string }
   check('handler: start ok', res.status === 200 && body.type === 'ok', body)
@@ -434,9 +438,22 @@ async function handlerChecks() {
   check('handler: end validates ids', res.status === 400)
   res = await handleVideo(post('/api/video/end', { callId: 'a'.repeat(24), endKey: 'b'.repeat(32) }), env, '/api/video/end', ns)
   check('handler: end ok', res.status === 200 && (await res.json()).ok === true)
+  counted.length = 0
+  res = await handleVideo(post('/api/video/end', { callId: 'a'.repeat(24), endKey: 'b'.repeat(32) }), env, '/api/video/end', ns)
+  check('counts: ending a call counts nothing', counted.length === 0, counted)
   const limited = { ...ns as object, limiter: { getByName: () => ({ allow: async () => false }) } } as never
   res = await handleVideo(post('/api/video/start', { page: 'home', visitor: 'visitor1234' }), env, '/api/video/start', limited)
   check('handler: network flood limited', (await res.json()).reason === 'visitor')
+  check('counts: a refused call, by reason', counted.join() === 'video_refused_visitor', counted)
+  counted.length = 0
+  const full = { ...ns as object, calls: { getByName: () => ({ start: async () => ({ type: 'unavailable', reason: 'budget' }) }) } } as never
+  res = await handleVideo(post('/api/video/start', { page: 'home', visitor: 'visitor1234' }), env, '/api/video/start', full)
+  check('handler: budget refusal passed on', (await res.json()).reason === 'budget')
+  check('counts: budget refusal', counted.join() === 'video_refused_budget', counted)
+  counted.length = 0
+  const broken = { ...ns as object, calls: { getByName: () => ({ start: async () => { throw new Error('down') } }) } } as never
+  res = await handleVideo(post('/api/video/start', { page: 'home', visitor: 'visitor1234' }), env, '/api/video/start', broken)
+  check('counts: a failed start', (await res.json()).reason === 'error' && counted.join() === 'video_refused_error', counted)
 }
 
 test('limits and budget', limitsChecks)

@@ -21,5 +21,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["worker", "src/config/site.ts", "src/config/about.ts", "src/receptionist/protocol.ts"]
+  "include": ["worker", "src/config/site.ts", "src/config/about.ts", "src/receptionist/protocol.ts", "src/lib/count-events.ts"]
 }

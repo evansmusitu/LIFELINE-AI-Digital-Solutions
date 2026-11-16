@@ -7,8 +7,9 @@
 	// pull request Preview its own workers.dev link.
 	"workers_dev": true,
 	"preview_urls": true,
-	// The Worker script answers /api/* only (the AI receptionist and video calls). Every other
-	// request is a static file from the Vite build, which Cloudflare serves free and without a limit.
+	// The Worker script answers /api/* (the AI receptionist, video calls and counts) and the private
+	// /stats page only. Every other request is a static file from the Vite build, which Cloudflare
+	// serves free and without a limit.
 	"main": "worker/index.ts",
 	"assets": {
 		"directory": "./dist",
@@ -16,18 +17,19 @@
 		// /demos/<slug> serves dist/demos/<slug>.html (the default "auto-trailing-slash" HTML
 		// handling). Unknown paths load the studio, which shows its "page not found" screen.
 		"not_found_handling": "single-page-application",
-		"run_worker_first": ["/api/*"],
+		"run_worker_first": ["/api/*", "/stats"],
 	},
 	// Workers AI. On the Workers Free plan it includes 10,000 Neurons a day. Past that, calls
 	// fail instead of being billed, and the receptionist switches to its saved answers.
 	"ai": { "binding": "AI" },
 	// ChatLimiter: message limits per minute and per day (worker/limiter.ts), so one visitor or one
 	// network can't use up the day's free AI allowance. VideoCalls: starts and ends video calls and
-	// keeps them inside the limits below (worker/video-calls.ts). The Workers Free plan only allows
-	// SQLite-backed classes.
+	// keeps them inside the limits below (worker/video-calls.ts). SiteStats: the daily totals shown on
+	// /stats (worker/stats.ts). The Workers Free plan only allows SQLite-backed classes.
 	"migrations": [
 		{ "tag": "v1", "new_sqlite_classes": ["ChatLimiter"] },
 		{ "tag": "v2", "new_sqlite_classes": ["VideoCalls"] },
+		{ "tag": "v3", "new_sqlite_classes": ["SiteStats"] },
 	],
 	// The Napster API key is the secret NAPSTER_API_KEY, set in Cloudflare, not here.
 	"vars": {
@@ -45,6 +47,8 @@
 		// Just under 3 minutes, so a full call is billed as 3 minutes (Napster bills each started minute).
 		"VIDEO_CALL_SECONDS": "175",
 		"VIDEO_PRICE_PER_MINUTE": "0.0583",
+		// The private /stats page: SHA-256 of its passcode, from `npm run stats-passcode`. "" removes the page.
+		"STATS_PASSCODE_SHA256": "9568a3b803f24b6e9533a1116bb4ebf51332c35dd7f8e7c9014f52bd42548b97",
 	},
 	// Worker Previews (pull request preview links) don't inherit the settings above, so they are
 	// repeated here. Each Preview gets its own Durable Objects automatically. Previews use their own
@@ -63,6 +67,7 @@
 			"VIDEO_CALLS_PER_NETWORK": "6",
 			"VIDEO_CALL_SECONDS": "175",
 			"VIDEO_PRICE_PER_MINUTE": "0.0583",
+			"STATS_PASSCODE_SHA256": "9568a3b803f24b6e9533a1116bb4ebf51332c35dd7f8e7c9014f52bd42548b97",
 		},
 	},
 }

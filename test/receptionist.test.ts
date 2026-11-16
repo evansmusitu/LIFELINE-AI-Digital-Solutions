@@ -90,6 +90,10 @@ async function streamChecks() {
 }
 
 function parseChecks() {
+  const first = parseRequest(JSON.stringify({ messages: [{ role: 'user', content: 'Hi' }, { role: 'user', content: 'there' }] }))
+  check('parse: one visitor turn is the first message', first?.first === true, first)
+  const later = parseRequest(JSON.stringify({ messages: [{ role: 'assistant', content: 'From a call' }, { role: 'user', content: 'Hi' }] }))
+  check('parse: anything before it means not the first', later?.first === false, later)
   const ok = parseRequest(JSON.stringify({ messages: [{ role: 'user', content: ' Hi ' }], page: 'home', visitor: 'abcdefgh12' }))
   check('parse: valid', ok?.messages.length === 1 && ok.messages[0].content === 'Hi' && ok.visitor === 'abcdefgh12', ok)
   const merged = parseRequest(
@@ -178,8 +182,9 @@ function makeLimiter(opts: { visitorOk?: boolean; networkOk?: boolean; limiterTh
   } as unknown as DurableObjectNamespace<ChatLimiter>
 }
 
-type Opts = Parameters<typeof makeEnv>[0] & Parameters<typeof makeLimiter>[0]
-const handle = (req: Request, opts: Opts) => handleReceptionist(req, makeEnv(opts), makeLimiter(opts))
+type Opts = Parameters<typeof makeEnv>[0] & Parameters<typeof makeLimiter>[0] & { counted?: string[] }
+const handle = (req: Request, opts: Opts) =>
+  handleReceptionist(req, makeEnv(opts), makeLimiter(opts), (event) => void opts.counted?.push(event))
 
 const ORIGIN = 'https://studio.example'
 function post(body: unknown, headers: Record<string, string> = {}) {
@@ -229,20 +234,38 @@ async function handlerChecks() {
   check('handler: IPv6 grouped by /64', keys.includes('network:2001:db8:abcd:12::/64@30/150'), keys)
 
   const outageCalls: RunCall[] = []
-  res = await handle(post(goodBody), ({ limiterThrows: true, calls: outageCalls }))
+  let counted: string[] = []
+  res = await handle(post(goodBody), ({ limiterThrows: true, calls: outageCalls, counted }))
   body = await res.json()
   check('handler: limiter outage gives saved answers, no AI call', res.status === 200 && body.reason === 'busy' && outageCalls.length === 0, body)
+  check('counts: limiter outage', counted.join() === 'chat_started,saved_busy', counted)
 
+  counted = []
   res = await handle(
     post(goodBody),
     ({
       run: async () => {
         throw new Error('4006: you have used up your daily free allocation of 10,000 neurons')
       },
+      counted,
     }),
   )
   body = await res.json()
   check('handler: quota error is fallback quota', res.status === 200 && body.reason === 'quota', body)
+  check('counts: quota', counted.join() === 'chat_started,saved_quota', counted)
+
+  counted = []
+  await handle(post(goodBody), { visitorOk: false, counted })
+  check('counts: a limited message is not a saved answer', counted.join() === 'chat_started', counted)
+  counted = []
+  await handle(post({ ...goodBody, messages: [{ role: 'user', content: 'Hi' }, { role: 'assistant', content: 'Hello' }, { role: 'user', content: 'Prices?' }] }), { counted })
+  check('counts: a later message is a reply, not a new chat', counted.join() === 'ai_reply', counted)
+  counted = []
+  await handle(post(goodBody), { counted })
+  check('counts: first message starts a chat', counted.join() === 'chat_started,ai_reply', counted)
+  counted = []
+  await handle(post({ messages: [] }), { counted })
+  check('counts: bad request counts nothing', counted.length === 0, counted)
   res = await handle(
     post(goodBody),
     ({
