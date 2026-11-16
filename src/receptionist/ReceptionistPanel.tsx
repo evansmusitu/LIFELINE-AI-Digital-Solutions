@@ -171,7 +171,7 @@ export default function ReceptionistPanel({ open, page, onClose }: Props) {
             {RECEPTIONIST_NAME}
           </h2>
           <p id={`${id}-role`} className="truncate text-xs text-mist-300">
-            AI receptionist for LIFELINE
+            AI receptionist
           </p>
         </div>
         {canSpeak() && (

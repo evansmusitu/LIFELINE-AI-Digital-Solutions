@@ -84,13 +84,14 @@ their questions filled in.
 
 - **How it works.** The browser posts the conversation to `/api/receptionist`. The Worker (`worker/receptionist.ts`)
   checks it, adds the instructions and facts in `worker/prompt.ts`, and streams the reply from Workers AI. The model
-  is set by `AI_MODEL` in `wrangler.jsonc` (Gemma 4 26B, with thinking switched off).
+  is set by `AI_MODEL` in `wrangler.jsonc` (Gemma 4 26B, with thinking switched off). In a comparison on the
+  Preview it wrote the most natural Shona of the three models listed in `worker/receptionist.ts`.
 - **Facts.** The prompt uses the same text as the website: `src/config/site.ts`, `src/config/about.ts`, and the demo
   list, which the build writes to `dist/receptionist-knowledge.json` from `src/demos/registry.ts`. A new demo is
   known to the receptionist as soon as it is on the site.
 - **Cost: $0.** On the Workers Free plan, Workers AI includes 10,000 Neurons a day (reset at 00:00 UTC). Past that,
-  Cloudflare refuses the call instead of billing for it. One reply uses roughly 20 to 25 Neurons, so about 400
-  replies a day. Moving the account to the Workers Paid plan would change this: usage past the allowance would then be
+  Cloudflare refuses the call instead of billing for it. One reply uses an estimated 20 to 25 Neurons (about 2,000
+  tokens of instructions and facts, plus the reply), so roughly 400 replies a day. Moving the account to the Workers Paid plan would change this: usage past the allowance would then be
   billed.
 - **Saved answers.** When there is no AI reply (allowance used up, too many messages, offline or an error), the browser
   answers from `src/receptionist/fallback.ts` and labels it "Saved answer". The chat never stops working.
