@@ -14,6 +14,8 @@ export function countEvent(event: PageEvent): void {
       keepalive: true,
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ event }),
+      // The site's address only, not the page's. ("no-referrer" would also blank the Origin header the Worker checks.)
+      referrerPolicy: 'origin',
     }).catch(() => undefined)
   } catch {
     // No fetch, or blocked: nothing to count.
@@ -50,7 +52,8 @@ export function startCounting(): void {
     // A link whose own handler cancelled it, like the share icon when it opens the phone's share menu instead.
     if (event.defaultPrevented || !(event.target instanceof Element)) return
     const link = event.target.closest('a[href]')
-    if (!(link instanceof HTMLAnchorElement)) return
+    // data-count-skip: a tap already counted another way, such as the link shown when a pop-up was blocked.
+    if (!(link instanceof HTMLAnchorElement) || link.hasAttribute('data-count-skip')) return
     const found = linkEvent(link.href, link.closest('[data-count-source]')?.getAttribute('data-count-source') ?? null)
     if (found) countEvent(found)
   })

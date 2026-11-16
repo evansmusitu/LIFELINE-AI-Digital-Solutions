@@ -69,8 +69,8 @@ function TariPhoto({ className, compact }: { className?: string; compact?: boole
 function MeetTari({ compact }: { compact?: boolean }) {
   const buttons = (
     <div className={cn('flex gap-2', compact ? 'mt-2.5' : 'mt-4')}>
-      <AskAiButton video size="sm" label="Video call" className="flex-1" />
-      <AskAiButton variant="secondary" size="sm" label="Chat" className="flex-1" />
+      <AskAiButton view="video" size="sm" label="Video call" aria-label={`Video call with ${RECEPTIONIST_NAME}`} className="flex-1" />
+      <AskAiButton view="chat" variant="secondary" size="sm" label="Chat" aria-label={`Chat with ${RECEPTIONIST_NAME}`} className="flex-1" />
     </div>
   )
   if (compact) {
@@ -611,7 +611,14 @@ function EnquiryForm() {
         {sentUrl && (
           <p role="status" className="rounded-xl border border-brand-cyan/30 bg-brand-cyan/5 px-4 py-3 text-sm text-mist-100">
             WhatsApp should now be open with your message. If it didn’t open,{' '}
-            <a href={sentUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-cyan underline">
+            {/* data-count-skip: sending the form already counted this WhatsApp tap. */}
+            <a
+              href={sentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-count-skip
+              className="font-semibold text-brand-cyan underline"
+            >
               open WhatsApp here
             </a>
             .

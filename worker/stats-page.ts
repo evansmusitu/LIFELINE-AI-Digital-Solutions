@@ -24,7 +24,7 @@ export const TABLE_DAYS = 14
 
 export const EVENT_LABELS: Record<CountEvent, string> = {
   chat_started: 'Chats started (first message sent)',
-  ai_reply: 'Chat replies written by the AI',
+  ai_reply: 'Chat replies written by the AI, in full',
   saved_quota: 'Saved answers: the day’s free AI allowance was used up',
   saved_busy: 'Saved answers: the AI was busy',
   saved_error: 'Saved answers: the AI failed',
@@ -179,7 +179,8 @@ function page(body: string, status = 200): Response {
       ...BASE_HEADERS,
       'content-type': 'text/html; charset=utf-8',
       'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
-      'referrer-policy': 'no-referrer',
+      // Not "no-referrer": with that, browsers send "Origin: null" on the passcode form, and the origin check refuses it.
+      'referrer-policy': 'same-origin',
       'x-robots-tag': 'noindex',
     },
   })

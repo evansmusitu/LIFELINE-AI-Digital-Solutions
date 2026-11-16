@@ -17,10 +17,13 @@ interface Namespaces {
   limiter: DurableObjectNamespace<ChatLimiter>
 }
 
+const unavailable = (reason: VideoUnavailableReason) => json({ type: 'unavailable', reason } satisfies VideoStartResponse)
+
 export async function handleVideo(request: Request, env: Env, path: string, ns: Namespaces, count: Count): Promise<Response> {
-  const unavailable = (reason: VideoUnavailableReason) => {
+  // Refusals are counted only past the flood guard below, so a script can't push the totals up for free.
+  const refused = (reason: VideoUnavailableReason) => {
     count(`video_refused_${reason}`)
-    return json({ type: 'unavailable', reason } satisfies VideoStartResponse)
+    return unavailable(reason)
   }
   const rejected = rejectRequest(request)
   if (rejected) return rejected
@@ -60,11 +63,11 @@ export async function handleVideo(request: Request, env: Env, path: string, ns: 
       instructions: videoPrompt(knowledge, maxSeconds),
       opening: videoOpening(knowledge, page, maxSeconds),
     })
-    if (started.type === 'unavailable') return unavailable(started.reason)
+    if (started.type === 'unavailable') return refused(started.reason)
     count('video_started')
     return json(started)
   } catch (error) {
     console.warn(`video: ${RECEPTIONIST_NAME} call start failed`, error instanceof Error ? error.message : String(error))
-    return unavailable('error')
+    return refused('error')
   }
 }

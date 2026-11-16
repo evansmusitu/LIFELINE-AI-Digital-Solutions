@@ -68,8 +68,13 @@ export function counter(stats: DurableObjectNamespace<SiteStats>, ctx: Execution
   }
 }
 
-/** Events per minute and per day one network can send, so a script can't inflate the totals much. */
-export const EVENT_LIMITS = { minute: 20, day: 300 } as const
+/**
+ * Taps and shares one network can send per minute and per day. Many phones on one mobile network can share an
+ * address, so the day's cap is above what one visitor does. A script spread over many networks can still add to
+ * these totals, so treat them as a guide. The chat and call totals are firmer: the Worker counts them itself,
+ * within the chat and call limits.
+ */
+export const EVENT_LIMITS = { minute: 10, day: 100 } as const
 
 /** POST /api/event {"event": "whatsapp_page"}: one tap or share from a page. Answers 204, with nothing to read. */
 export async function handleEvent(request: Request, limiter: DurableObjectNamespace<ChatLimiter>, count: Count): Promise<Response> {

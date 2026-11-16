@@ -2,8 +2,8 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
 /*
- * Logic tests for the receptionist and video calls (test/). They run in Node: the Worker code
- * with Cloudflare's runtime module replaced by a stub, the browser code without a page.
+ * Logic tests for the receptionist, video calls and daily totals (test/). They run in Node: the
+ * Worker code with Cloudflare's runtime module replaced by a stub, the browser code without a page.
  */
 export default defineConfig({
   resolve: {
@@ -15,6 +15,6 @@ export default defineConfig({
     include: ['test/**/*.test.ts'],
     environment: 'node',
     // The Worker logs warnings on purpose in failure paths. Keep the test output readable.
-    onConsoleLog: (log, type) => !(type === 'stderr' && /^(receptionist|video):/.test(log)),
+    onConsoleLog: (log, type) => !(type === 'stderr' && /^(receptionist|video|stats):/.test(log)),
   },
 })

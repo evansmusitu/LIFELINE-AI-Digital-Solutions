@@ -109,8 +109,8 @@ export async function handleReceptionist(
   if (raw === null) return json({ error: 'too_large' }, 413)
   const chat = parseRequest(raw)
   if (!chat) return json({ error: 'bad_request' }, 400)
-  if (chat.first) count('chat_started')
 
+  // Counted only once a message is within the limits, so a script can't push the totals up for free.
   const network = requestNetwork(request)
   try {
     // Visitor first, so a visitor over their own limit doesn't use up their network's.
@@ -124,9 +124,11 @@ export async function handleReceptionist(
   } catch (error) {
     // Without the limiter nothing protects the day's allowance, so answer from saved replies instead.
     console.warn('receptionist: rate limit check failed', error instanceof Error ? error.message : String(error))
+    if (chat.first) count('chat_started')
     count('saved_busy')
     return noReply('busy')
   }
+  if (chat.first) count('chat_started')
 
   const knowledge = await loadKnowledge(env, url.origin)
   const page = knowledge.demos.some((d) => d.slug === chat.page) ? chat.page : 'home'
@@ -150,9 +152,9 @@ export async function handleReceptionist(
     count(`saved_${reason}`)
     return noReply(reason)
   }
-  count('ai_reply')
 
-  return new Response(upstream.pipeThrough(replyStream()), {
+  // Counted once the whole reply has been sent. One that fails part-way isn't an AI reply.
+  return new Response(upstream.pipeThrough(replyStream(() => count('ai_reply'))), {
     headers: {
       ...BASE_HEADERS,
       'content-type': 'application/x-ndjson; charset=utf-8',

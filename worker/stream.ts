@@ -59,8 +59,9 @@ export function thinkFilter() {
 /**
  * Turns the Workers AI server-sent events stream into one JSON object per line for the browser:
  * {"type":"delta","text":"…"} for each piece of the reply, then {"type":"done"}, or {"type":"error"}.
+ * `onDone` runs once a whole reply has gone through, and not for one that failed or was cut off.
  */
-export function replyStream(): TransformStream<Uint8Array, Uint8Array> {
+export function replyStream(onDone?: () => void): TransformStream<Uint8Array, Uint8Array> {
   const decoder = new TextDecoder()
   const encoder = new TextEncoder()
   const filter = thinkFilter()
@@ -111,6 +112,7 @@ export function replyStream(): TransformStream<Uint8Array, Uint8Array> {
       if (failed) return
       sendText(controller, filter.flush())
       send(controller, leading ? { type: 'error' } : { type: 'done' })
+      if (!leading) onDone?.()
     },
   })
 }

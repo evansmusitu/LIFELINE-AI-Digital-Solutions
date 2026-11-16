@@ -97,7 +97,7 @@ test('count endpoint', async () => {
   let res = await handleEvent(postEvent({ event: 'whatsapp_chat' }), limiter({ keys }), count)
   check('event: 204', res.status === 204 && res.headers.get('cache-control') === 'no-store', res.status)
   check('event: counted', counted.join() === 'whatsapp_chat', counted)
-  check('event: limited per network', keys.join() === 'event:203.0.113.9@20/300', keys)
+  check('event: limited per network', keys.join() === 'event:203.0.113.9@10/100', keys)
 
   counted.length = 0
   res = await handleEvent(postEvent({ event: 'chat_started' }), limiter(), count)
@@ -127,6 +127,61 @@ test('tap counter link rules', () => {
   check('link: other sites are not counted', linkEvent(`https://example.com/${SITE.whatsappNumber}`, null) === null)
   check('link: lookalike host is not counted', linkEvent(`https://wa.me.example.com/${SITE.whatsappNumber}`, null) === null)
   check('link: malformed', linkEvent('not a url', null) === null)
+})
+
+test('tap counter in a page', async () => {
+  // A minimal page: just enough of the DOM for the click listener in src/lib/counts.ts.
+  class FakeElement {
+    attrs: Record<string, string>
+    parent: FakeElement | null
+    href: string
+    constructor(attrs: Record<string, string>, parent: FakeElement | null = null, href = '') {
+      this.attrs = attrs
+      this.parent = parent
+      this.href = href
+    }
+    hasAttribute(name: string) {
+      return name in this.attrs
+    }
+    getAttribute(name: string) {
+      return this.attrs[name] ?? null
+    }
+    closest(selector: string): FakeElement | null {
+      const matches = selector === 'a[href]' ? this instanceof FakeAnchor : this.hasAttribute(selector.slice(1, -1))
+      return matches ? this : (this.parent?.closest(selector) ?? null)
+    }
+  }
+  class FakeAnchor extends FakeElement {}
+  const listeners: ((event: { target: unknown; defaultPrevented: boolean }) => void)[] = []
+  const sent: { event: string; options: RequestInit }[] = []
+  const saved = { document: globalThis.document, Element: globalThis.Element, HTMLAnchorElement: globalThis.HTMLAnchorElement, fetch: globalThis.fetch }
+  Object.assign(globalThis, {
+    document: { addEventListener: (_: string, fn: (typeof listeners)[number]) => void listeners.push(fn) },
+    Element: FakeElement,
+    HTMLAnchorElement: FakeAnchor,
+    fetch: async (_url: string, options: RequestInit) => {
+      sent.push({ event: JSON.parse(String(options.body)).event, options })
+      return new Response(null, { status: 204 })
+    },
+  })
+  try {
+    const { startCounting } = await import('../src/lib/counts')
+    startCounting()
+    const tap = (target: unknown, defaultPrevented = false) => listeners.forEach((fn) => fn({ target, defaultPrevented }))
+    const wa = `https://wa.me/${SITE.whatsappNumber}?text=Hi`
+    const panel = new FakeElement({ 'data-count-source': 'video' })
+    tap(new FakeElement({}, new FakeAnchor({}, panel, wa)))
+    tap(new FakeAnchor({}, null, wa))
+    tap(new FakeAnchor({}, null, wa), true)
+    tap(new FakeAnchor({ 'data-count-skip': '' }, null, wa))
+    tap(new FakeAnchor({}, null, 'https://example.com/'))
+    tap('text node')
+    check('page: counts by where the link sits', sent.map((s) => s.event).join() === 'whatsapp_video,whatsapp_page', sent.map((s) => s.event))
+    const options = sent[0].options
+    check('page: sends only the event, kept alive, without the page address', options.keepalive === true && options.referrerPolicy === 'origin' && options.body === '{"event":"whatsapp_video"}', options)
+  } finally {
+    Object.assign(globalThis, saved)
+  }
 })
 
 const PASSCODE = 'abcde-fghij-kmnpq-rstuv'
@@ -200,7 +255,9 @@ test('stats page', async () => {
   let html = await res.text()
   check('page: GET shows the form', res.status === 200 && html.includes('type="password"') && !html.includes('<table'), res.status)
   check('page: not stored or indexed', res.headers.get('cache-control') === 'no-store' && res.headers.get('x-robots-tag') === 'noindex')
-  check('page: locked down', (res.headers.get('content-security-policy') ?? '').includes("default-src 'none'") && res.headers.get('referrer-policy') === 'no-referrer')
+  check('page: locked down', (res.headers.get('content-security-policy') ?? '').includes("default-src 'none'") && (res.headers.get('content-security-policy') ?? '').includes("frame-ancestors 'none'"))
+  // "no-referrer" makes browsers send "Origin: null" on the form, which the origin check refuses.
+  check('page: the form keeps its origin', res.headers.get('referrer-policy') === 'same-origin', res.headers.get('referrer-policy'))
   check('page: no cookie', res.headers.get('set-cookie') === null)
 
   const keys: string[] = []
@@ -219,6 +276,8 @@ test('stats page', async () => {
   check('page: limiter down', res.status === 503 && !(await res.text()).includes('<table'), res.status)
   res = await handleStats(postStats(PASSCODE, { origin: 'https://evil.example' }), statsEnv(), statsNamespaces(), NOW)
   check('page: other origin 403', res.status === 403, res.status)
+  res = await handleStats(postStats(PASSCODE, { origin: 'null' }), statsEnv(), statsNamespaces(), NOW)
+  check('page: hidden origin 403', res.status === 403, res.status)
   res = await handleStats(postStats(PASSCODE, { 'content-type': 'application/json' }), statsEnv(), statsNamespaces(), NOW)
   check('page: form posts only', res.status === 415, res.status)
   res = await handleStats(new Request(`${ORIGIN}/stats`, { method: 'PUT' }), statsEnv(), statsNamespaces(), NOW)

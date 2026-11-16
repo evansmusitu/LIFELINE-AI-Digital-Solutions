@@ -158,16 +158,19 @@ kept with them. It counts chats started, AI replies, saved answers (by reason), 
 away (by reason), WhatsApp taps (in the chat, on a video call, or on the pages) and demo shares (to WhatsApp, from
 the phone's share menu, or by copying the link). The footer tells visitors.
 
-- **How it works.** The Worker counts chats and calls as it answers them. The browser counts WhatsApp taps and
-  shares (`src/lib/counts.ts`) by posting the event's name to `/api/event`, which takes at most 20 a minute and 300 a
-  day from one network. The `SiteStats` Durable Object (`worker/stats.ts`) keeps one entry per UTC day, for 400 days.
-  A count is added after the reply has gone, and a failed count never breaks the reply.
-- **Cost: $0.** Each count is one Durable Object request, one row read and one row written. A tap or share also goes
-  through the per-network limit, which is one more of each. The Workers Free plan includes 100,000 Durable Object
-  requests and 100,000 rows written a day, shared with the message limiter and video calls.
+- **How it works.** The Worker counts chats and calls itself, and only for requests within the chat and call limits,
+  so a script can't push them up for free. An AI reply counts once it has been sent in full. The browser counts
+  WhatsApp taps and shares (`src/lib/counts.ts`) by posting the event's name to `/api/event`, which takes at most 10
+  a minute and 100 a day from one network. Those are a guide rather than exact: a script spread over many networks
+  could add to them. The `SiteStats` Durable Object (`worker/stats.ts`) keeps one entry per UTC day, for 400 days. A
+  count is added after the reply has gone, and a failed count never breaks the reply.
+- **Cost: $0.** Each count is one Durable Object request, one row read and one row written, plus a few more once a
+  day to delete the oldest day. A tap or share also goes through the per-network limit, which adds about the same
+  again. The Workers Free plan includes 100,000 Durable Object requests and 100,000 rows written a day, shared with
+  the message limiter and video calls. Requests refused by a limit aren't counted, so they cost what they did before.
 - **Reading them.** Open `/stats` on the live site and enter the passcode. The page shows video call spending, the
-  last 14 days and every total since counting began. Previews keep their own totals. Wrong passcodes are limited to
-  10 tries a minute and 60 a day per network.
+  last 14 days and every total since counting began. Previews keep their own totals. Passcode tries, right or wrong,
+  are limited to 10 a minute and 60 a day per network.
 - **The passcode.** Only its SHA-256 is in `wrangler.jsonc` (`STATS_PASSCODE_SHA256`), which is safe in a public
   repository because the passcode is 20 random characters. To change it, run `npm run stats-passcode`, put the new
   hash in both `vars` and `previews.vars`, and merge. Set it to `""` to remove the page.

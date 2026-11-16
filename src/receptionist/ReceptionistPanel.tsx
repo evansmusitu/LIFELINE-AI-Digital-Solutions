@@ -20,6 +20,7 @@ import { usePersistentState } from '../lib/storage'
 import { cleanReply, replyParts, spokenText, suggestions, whatsappSummary, type ChatMessage } from './chat'
 import { PANEL_FRAME } from './frame'
 import { LIMITS, RECEPTIONIST_NAME } from './protocol'
+import type { ViewRequest } from './receptionist-context'
 import { canSpeak, speak, stopSpeaking, unlockSpeech, useDictation, type DictationProblem } from './speech'
 import { useReceptionistChat } from './useReceptionistChat'
 
@@ -44,12 +45,12 @@ interface Props {
   page: string
   /** True on phones, where the chat covers the whole screen and the page behind is inert. */
   fullScreen: boolean
-  /** Changes when a button asks to open on the video call screen. */
-  videoRequest: number
+  /** Changes when a button asks to open on a particular screen. */
+  viewRequest: ViewRequest | null
   onClose: () => void
 }
 
-export default function ReceptionistPanel({ open, page, fullScreen, videoRequest, onClose }: Props) {
+export default function ReceptionistPanel({ open, page, fullScreen, viewRequest, onClose }: Props) {
   const id = useId()
   const [voiceOn, setVoiceOn] = usePersistentState('receptionist.voice', () => false)
   const voice = useRef(voiceOn)
@@ -174,17 +175,19 @@ export default function ReceptionistPanel({ open, page, fullScreen, videoRequest
     setView('video')
   }
 
-  // A "Video call" button outside the chat opens it on the video screen.
-  const [shownVideoRequest, setShownVideoRequest] = useState(0)
-  if (videoRequest !== shownVideoRequest) {
-    setShownVideoRequest(videoRequest)
-    setView('video')
+  // A button outside the chat, such as the hero's "Video call" and "Chat", opens it on that screen.
+  const [shownRequest, setShownRequest] = useState(0)
+  if (viewRequest && viewRequest.id !== shownRequest) {
+    setShownRequest(viewRequest.id)
+    setView(viewRequest.view)
   }
+  // Going to the video screen stops the chat's voice and dictation, as the chat's own video button does.
+  const requestedVideo = viewRequest?.view === 'video' ? viewRequest.id : 0
   useEffect(() => {
-    if (videoRequest === 0) return
+    if (requestedVideo === 0) return
     stopSpeaking()
     cancelDictation()
-  }, [videoRequest, cancelDictation])
+  }, [requestedVideo, cancelDictation])
 
   const backToChat = useCallback(() => {
     setView('chat')

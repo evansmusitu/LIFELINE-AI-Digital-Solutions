@@ -1,28 +1,33 @@
 import { Sparkles, Video } from 'lucide-react'
 import { Button } from '../components/Button'
 import { cn } from '../lib/cn'
-import { useReceptionist } from './receptionist-context'
+import { useReceptionist, type ReceptionistView } from './receptionist-context'
 
 type ButtonProps = Parameters<typeof Button>[0]
 
 /**
  * A studio button that opens the AI receptionist. `iconOnly` keeps the label for screen readers only.
- * `video` opens it on the video call screen.
+ * `view` opens it on the chat or the video call screen.
  */
 export function AskAiButton({
   label,
   iconOnly,
-  video,
+  view,
   className,
   ...props
-}: Omit<ButtonProps, 'onClick' | 'children'> & { label: string; iconOnly?: boolean; video?: boolean }) {
+}: Omit<ButtonProps, 'onClick' | 'children'> & {
+  label: string
+  iconOnly?: boolean
+  /** Open on this screen. Without it, the chat opens on the screen it was on last. */
+  view?: ReceptionistView
+}) {
   const { open, prefetch } = useReceptionist()
-  const Icon = video ? Video : Sparkles
+  const Icon = view === 'video' ? Video : Sparkles
   return (
     <Button
       {...props}
       className={cn(iconOnly && 'size-11 shrink-0 px-0!', className)}
-      onClick={(event) => open(event.currentTarget, { video })}
+      onClick={(event) => open(event.currentTarget, { view })}
       onPointerEnter={prefetch}
       onFocus={prefetch}
     >

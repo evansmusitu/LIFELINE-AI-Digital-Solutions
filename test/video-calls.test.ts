@@ -444,7 +444,11 @@ async function handlerChecks() {
   const limited = { ...ns as object, limiter: { getByName: () => ({ allow: async () => false }) } } as never
   res = await handleVideo(post('/api/video/start', { page: 'home', visitor: 'visitor1234' }), env, '/api/video/start', limited)
   check('handler: network flood limited', (await res.json()).reason === 'visitor')
-  check('counts: a refused call, by reason', counted.join() === 'video_refused_visitor', counted)
+  check('counts: the flood guard counts nothing', counted.length === 0, counted)
+  counted.length = 0
+  const daily = { ...ns as object, calls: { getByName: () => ({ start: async () => ({ type: 'unavailable', reason: 'visitor' }) }) } } as never
+  res = await handleVideo(post('/api/video/start', { page: 'home', visitor: 'visitor1234' }), env, '/api/video/start', daily)
+  check('counts: a visitor over their daily calls, by reason', counted.join() === 'video_refused_visitor', counted)
   counted.length = 0
   const full = { ...ns as object, calls: { getByName: () => ({ start: async () => ({ type: 'unavailable', reason: 'budget' }) }) } } as never
   res = await handleVideo(post('/api/video/start', { page: 'home', visitor: 'visitor1234' }), env, '/api/video/start', full)

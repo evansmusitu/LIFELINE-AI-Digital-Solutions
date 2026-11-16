@@ -256,13 +256,27 @@ async function handlerChecks() {
 
   counted = []
   await handle(post(goodBody), { visitorOk: false, counted })
-  check('counts: a limited message is not a saved answer', counted.join() === 'chat_started', counted)
+  check('counts: a message over the limit counts nothing', counted.length === 0, counted)
   counted = []
-  await handle(post({ ...goodBody, messages: [{ role: 'user', content: 'Hi' }, { role: 'assistant', content: 'Hello' }, { role: 'user', content: 'Prices?' }] }), { counted })
+  await handle(post(goodBody), { networkOk: false, counted })
+  check('counts: over the network limit counts nothing', counted.length === 0, counted)
+  counted = []
+  res = await handle(post({ ...goodBody, messages: [{ role: 'user', content: 'Hi' }, { role: 'assistant', content: 'Hello' }, { role: 'user', content: 'Prices?' }] }), { counted })
+  check('counts: nothing for the reply until it has been sent', counted.length === 0, counted)
+  await res.text()
   check('counts: a later message is a reply, not a new chat', counted.join() === 'ai_reply', counted)
   counted = []
-  await handle(post(goodBody), { counted })
+  res = await handle(post(goodBody), { counted })
+  await res.text()
   check('counts: first message starts a chat', counted.join() === 'chat_started,ai_reply', counted)
+  counted = []
+  res = await handle(post(goodBody), { counted, run: async () => sse(['data: {"choices":[{"delta":{"content":"Su"}}]}\n', 'data: {"error":"boom"}\n']) })
+  await res.text()
+  check('counts: a reply that fails part-way is not an AI reply', counted.join() === 'chat_started', counted)
+  counted = []
+  res = await handle(post(goodBody), { counted, run: async () => sse(['data: [DONE]\n']) })
+  await res.text()
+  check('counts: an empty reply is not an AI reply', counted.join() === 'chat_started', counted)
   counted = []
   await handle(post({ messages: [] }), { counted })
   check('counts: bad request counts nothing', counted.length === 0, counted)
