@@ -94,8 +94,10 @@ their questions filled in.
   billed.
 - **Saved answers.** When there is no AI reply (allowance used up, too many messages, offline or an error), the browser
   answers from `src/receptionist/fallback.ts` and labels it "Saved answer". The chat never stops working.
-- **Limits.** 8 messages a minute per visitor and 30 per network (`ratelimits` in `wrangler.jsonc`), messages up to
-  500 characters, the last 10 messages sent as history, and requests only from the site's own pages.
+- **Limits.** 8 messages a minute per visitor and 30 per network, counted exactly by a small Durable Object
+  (`worker/limiter.ts`, included in the Free plan). Also: messages up to 500 characters, the last 10 messages sent as
+  history, and requests only from the site's own pages. Cloudflare's built-in Rate Limiting binding was tried first,
+  but it is approximate per location and in testing let every request through.
 - **Voice.** "Read replies aloud" uses the phone's built-in voice. Voice typing uses the browser's speech service and
   only shows where the browser supports it (Chrome, Edge, Safari).
 - **Privacy.** Messages go to Workers AI to write each reply. The production model has zero data retention, and

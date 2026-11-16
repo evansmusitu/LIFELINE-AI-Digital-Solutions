@@ -7,6 +7,7 @@ import {
   type NoReply,
   type ReceptionistRequest,
 } from '../src/receptionist/protocol'
+import type { ChatLimiter } from './limiter'
 import { systemPrompt } from './prompt'
 import { replyStream } from './stream'
 
@@ -25,6 +26,11 @@ const MODELS: Record<string, Record<string, unknown>> = {
 const DEFAULT_MODEL = '@cf/google/gemma-4-26b-a4b-it'
 
 const MAX_REPLY_TOKENS = 400
+
+/** Messages a minute: per visitor (the random ID kept in their browser), and per network, which many phones can share. */
+export const VISITOR_LIMIT = 8
+export const NETWORK_LIMIT = 30
+const LIMIT_WINDOW_MS = 60_000
 
 const BASE_HEADERS = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }
 
@@ -143,7 +149,11 @@ export function failureReason(error: unknown): NoReply['reason'] {
 
 type RunStream = (model: string, inputs: Record<string, unknown>) => Promise<ReadableStream<Uint8Array>>
 
-export async function handleReceptionist(request: Request, env: Env): Promise<Response> {
+export async function handleReceptionist(
+  request: Request,
+  env: Env,
+  limiter: DurableObjectNamespace<ChatLimiter>,
+): Promise<Response> {
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, { allow: 'POST' })
 
   const url = new URL(request.url)
@@ -163,10 +173,10 @@ export async function handleReceptionist(request: Request, env: Env): Promise<Re
   let limits = 'checked'
   try {
     const [byNetwork, byVisitor] = await Promise.all([
-      env.CHAT_NETWORK_LIMIT.limit({ key: network }),
-      env.CHAT_VISITOR_LIMIT.limit({ key: chat.visitor || `network:${network}` }),
+      limiter.getByName(`network:${network}`).allow(NETWORK_LIMIT, LIMIT_WINDOW_MS),
+      limiter.getByName(`visitor:${chat.visitor || network}`).allow(VISITOR_LIMIT, LIMIT_WINDOW_MS),
     ])
-    if (!byNetwork.success || !byVisitor.success) return noReply('limited', 429)
+    if (!byNetwork || !byVisitor) return noReply('limited', 429)
   } catch (error) {
     // A rate limiter outage shouldn't take the receptionist down. The daily AI allowance still caps use.
     limits = 'unavailable'

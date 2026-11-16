@@ -21,25 +21,18 @@
 	// Workers AI. On the Workers Free plan it includes 10,000 Neurons a day. Past that, calls
 	// fail instead of being billed, and the receptionist switches to its saved answers.
 	"ai": { "binding": "AI" },
-	// Per-minute limits, so one visitor or one network can't use up the day's free AI allowance.
-	// Counts are per Cloudflare location and approximate.
-	"ratelimits": [
-		{ "name": "CHAT_VISITOR_LIMIT", "namespace_id": "1001", "simple": { "limit": 8, "period": 60 } },
-		{ "name": "CHAT_NETWORK_LIMIT", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } },
-	],
+	// Per-minute message limits (worker/limiter.ts), so one visitor or one network can't use up the
+	// day's free AI allowance. The Workers Free plan only allows SQLite-backed Durable Object classes.
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatLimiter"] }],
 	"vars": {
 		"AI_MODEL": "@cf/google/gemma-4-26b-a4b-it",
 		// "true" lets a request pick another model from the list in worker/receptionist.ts. Previews only.
 		"ALLOW_MODEL_CHOICE": "false",
 	},
-	// Worker Previews (pull request preview links) don't inherit the settings above, so they
-	// are repeated here. The rate limit namespaces differ so previews never share production counts.
+	// Worker Previews (pull request preview links) don't inherit the settings above, so they are
+	// repeated here. Each Preview gets its own ChatLimiter objects automatically.
 	"previews": {
 		"ai": { "binding": "AI" },
-		"ratelimits": [
-			{ "name": "CHAT_VISITOR_LIMIT", "namespace_id": "2001", "simple": { "limit": 8, "period": 60 } },
-			{ "name": "CHAT_NETWORK_LIMIT", "namespace_id": "2002", "simple": { "limit": 30, "period": 60 } },
-		],
 		"vars": {
 			"AI_MODEL": "@cf/google/gemma-4-26b-a4b-it",
 			"ALLOW_MODEL_CHOICE": "true",
