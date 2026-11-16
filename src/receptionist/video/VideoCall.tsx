@@ -186,7 +186,7 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
     if (event.kind === 'tari' || event.kind === 'visitor') {
       transcript.current.add(event)
       setCaption(transcript.current.caption)
-      if (event.kind === 'tari' && event.final) setSpoken(`${RECEPTIONIST_NAME}: ${event.text}`)
+      if (event.kind === 'tari' && event.final) setSpoken(`${RECEPTIONIST_NAME}: ${transcript.current.tariLine(event.itemId)}`)
       setIdle(false)
     } else if (event.kind === 'tool' && event.name === 'show_demo') {
       const { demo, output } = showDemo(event.args)

@@ -39,6 +39,9 @@
 		// Total Napster spend allowed, across the live site, Previews and tests together. "0" turns calls off.
 		"VIDEO_BUDGET_USD": "40",
 		"VIDEO_CALLS_PER_DAY": "20",
+		// Per day. Many phones on one mobile network can share an IPv4 address, so the network limit is higher.
+		"VIDEO_CALLS_PER_VISITOR": "2",
+		"VIDEO_CALLS_PER_NETWORK": "6",
 		"VIDEO_CALL_SECONDS": "180",
 		"VIDEO_PRICE_PER_MINUTE": "0.0583",
 	},
@@ -54,6 +57,9 @@
 			"NAPSTER_AGENT_ID": "bc89d6ff-e2d8-4a1e-8cf1-536f4ace96a5",
 			"VIDEO_BUDGET_USD": "40",
 			"VIDEO_CALLS_PER_DAY": "20",
+			// Higher on Previews, for testing. The daily and spending limits above still apply.
+			"VIDEO_CALLS_PER_VISITOR": "20",
+			"VIDEO_CALLS_PER_NETWORK": "20",
 			"VIDEO_CALL_SECONDS": "180",
 			"VIDEO_PRICE_PER_MINUTE": "0.0583",
 		},

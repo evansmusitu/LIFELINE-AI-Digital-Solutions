@@ -88,7 +88,8 @@ export class Transcript {
   add(event: CallEvent): void {
     if (event.kind === 'tari') {
       const existing = this.lines.find((l) => l.who === 'tari' && l.itemId === event.itemId)
-      if (existing) existing.text = event.final ? event.text : existing.text + event.text
+      // A finished line can arrive without its text: then the pieces already received are the line.
+      if (existing) existing.text = event.final ? event.text || existing.text : existing.text + event.text
       else {
         this.replyStartedAt = this.lines.length
         this.lines.push({ itemId: event.itemId, who: 'tari', text: event.text })
@@ -101,6 +102,11 @@ export class Transcript {
       if (at !== null && this.lines[at]?.who === 'tari') this.lines.splice(at, 0, line)
       else this.lines.push(line)
     }
+  }
+
+  /** The full text of one of Tari's lines. */
+  tariLine(itemId: string): string {
+    return this.lines.find((l) => l.who === 'tari' && l.itemId === itemId)?.text.trim() ?? ''
   }
 
   /** The latest thing Tari said, for the caption. */
