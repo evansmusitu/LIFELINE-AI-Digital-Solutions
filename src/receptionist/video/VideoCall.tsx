@@ -328,8 +328,9 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
     <div className="flex min-h-0 flex-1 flex-col">
       {/* The video. Kept in the page while connecting and live: the SDK draws inside it, so React leaves it empty. */}
       <div className={cn('relative min-h-0 flex-1 overflow-hidden bg-ink-950', !onStage && 'hidden')}>
-        <div ref={mount} className="lifeline-video-stage absolute inset-0" />
-        <p className="pointer-events-none absolute top-3 left-3 flex items-center gap-2 rounded-full bg-ink-950/80 px-3 py-1 text-xs font-semibold text-white">
+        {/* isolate keeps the SDK's own layers inside this box, under the countdown and captions. */}
+        <div ref={mount} className="lifeline-video-stage absolute inset-0 isolate" />
+        <p className="pointer-events-none absolute top-3 left-3 z-10 flex items-center gap-2 rounded-full bg-ink-950/80 px-3 py-1 text-xs font-semibold text-white">
           {phase === 'live' ? (
             <>
               <span className="size-2 animate-pulse rounded-full bg-red-500" aria-hidden="true" />
@@ -340,7 +341,7 @@ export default function VideoCall({ page, visitor, active, whatsappMessage, onFi
           )}
         </p>
         {caption && phase === 'live' && (
-          <p className="pointer-events-none absolute inset-x-3 bottom-3 line-clamp-3 rounded-xl bg-ink-950/80 px-3 py-2 text-sm leading-snug text-white" aria-hidden="true">
+          <p className="pointer-events-none absolute inset-x-3 bottom-3 z-10 line-clamp-3 rounded-xl bg-ink-950/80 px-3 py-2 text-sm leading-snug text-white" aria-hidden="true">
             {caption}
           </p>
         )}
