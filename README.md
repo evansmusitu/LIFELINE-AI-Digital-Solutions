@@ -114,7 +114,9 @@ their questions filled in.
 - **Voice.** "Read replies aloud" uses the phone's built-in voice. Voice typing uses the browser's speech service and
   only shows where the browser supports it (Chrome, Edge, Safari).
 - **Privacy.** Messages go to Workers AI to write each reply. The production model has zero data retention, and
-  Cloudflare doesn't train on customer content. The Worker doesn't log message text. The conversation is saved only in the visitor's browser.
+  Cloudflare doesn't train on customer content. The Worker doesn't log message text. Video calls are different:
+  Napster keeps each call's transcript in its session records until the session is deleted, and the footer says
+  so. The conversation is also saved in the visitor's browser.
 - **Previews.** Previews accept a `model` field in the request (`ALLOW_MODEL_CHOICE`), to compare the models listed
   in `worker/receptionist.ts`. Production ignores it.
 

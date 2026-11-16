@@ -69,9 +69,11 @@ export function SiteFooter() {
           <p>
             <span className="font-semibold text-mist-300">Privacy.</span> This site uses no cookies, analytics or
             tracking. Anything you type into a demo is saved only in your own browser, so the demo remembers it next
-            time, and Reset demo clears it. Messages to our AI receptionist are processed by our AI provider to write each
-            reply. They aren’t kept or used to train AI, and the conversation is saved only in your browser. Voice
-            typing uses your browser’s own speech service. WhatsApp buttons open a chat with a message ready for you to
+            time, and Reset demo clears it. Chat messages to our AI receptionist are processed by our AI provider to write
+            each reply, and aren’t kept or used to train AI. On a video call, your voice is processed by our video call
+            provider, which keeps a transcript of what was said. Your conversations with the receptionist are also saved
+            in your browser, so the chat remembers them, and Start a new chat clears them. Voice typing uses your
+            browser’s own speech service. WhatsApp buttons open a chat with a message ready for you to
             edit. It reaches LIFELINE only if you send it.
           </p>
           <p>
