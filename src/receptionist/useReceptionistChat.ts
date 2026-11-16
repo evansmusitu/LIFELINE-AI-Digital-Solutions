@@ -61,8 +61,9 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
     })
   }, [page, setChat])
 
-  // Lines spoken on a video call don't count towards the chat's message limit.
-  const visitorCount = chat.messages.filter((m) => m.role === 'user' && !m.fromCall).length
+  // Lines spoken on a video call don't count towards the chat's message limit, but do count as having asked.
+  const typedCount = chat.messages.filter((m) => m.role === 'user' && !m.fromCall).length
+  const asked = chat.messages.some((m) => m.role === 'user')
 
   const send = useCallback(
     async (input: string) => {
@@ -152,8 +153,8 @@ export function useReceptionistChat(page: string, onReply: (text: string) => voi
     messages: chat.messages,
     pending,
     busy: pending !== null,
-    limitReached: visitorCount >= MAX_VISITOR_MESSAGES,
-    asked: visitorCount > 0,
+    limitReached: typedCount >= MAX_VISITOR_MESSAGES,
+    asked,
     visitor,
     send,
     addCallRecord,

@@ -39,15 +39,20 @@ export function videoLimits(env: Env): VideoLimits {
     perVisitorPerDay: num(env.VIDEO_CALLS_PER_VISITOR, 2),
     // Higher than per visitor: many phones on one mobile network can share an IPv4 address.
     perNetworkPerDay: num(env.VIDEO_CALLS_PER_NETWORK, 6),
-    maxSeconds: Math.min(num(env.VIDEO_CALL_SECONDS, 180), 600),
+    maxSeconds: Math.min(num(env.VIDEO_CALL_SECONDS, 175), 600),
     pricePerMinute: num(env.VIDEO_PRICE_PER_MINUTE, 0.0583),
     maxConcurrent: 5,
   }
 }
 
-/** The most one call can cost: its time limit plus the grace period, at the per-minute price. */
+/** Napster bills each started minute: a 61-second call costs two minutes. */
+export function billedCost(seconds: number, pricePerMinute: number): number {
+  return pricePerMinute * Math.max(1, Math.ceil(seconds / 60))
+}
+
+/** The most one call can cost: its time limit plus the grace period, in billed minutes. */
 export function maxCallCost(limits: VideoLimits): number {
-  return (limits.pricePerMinute * (limits.maxSeconds + GRACE_SECONDS)) / 60
+  return billedCost(limits.maxSeconds + GRACE_SECONDS, limits.pricePerMinute)
 }
 
 interface Call {
@@ -87,7 +92,7 @@ const utcDayStartSeconds = (now: number) => Math.floor(Date.UTC(new Date(now).ge
  */
 export function reservation(createdAtSeconds: number, now: number, limits: VideoLimits): number {
   const runningSeconds = Math.max(0, now / 1000 - createdAtSeconds)
-  return Math.max(maxCallCost(limits), (limits.pricePerMinute * (runningSeconds + GRACE_SECONDS)) / 60)
+  return Math.max(maxCallCost(limits), billedCost(runningSeconds + GRACE_SECONDS, limits.pricePerMinute))
 }
 
 /** Totals from Napster's session list, plus calls made in the last two minutes that may not be listed yet. */

@@ -39,7 +39,7 @@ function spokenNumber(display: string): string {
  * per call, in the opening instruction (videoOpening).
  */
 export function videoPrompt(knowledge: Knowledge, maxSeconds: number): string {
-  const minutes = Math.round(maxSeconds / 60)
+  const minutes = Math.ceil(maxSeconds / 60)
   return [
     `Your name is ${RECEPTIONIST_NAME}. Ignore any other name, background or personality you were given before. You are the AI receptionist of ${SITE.brand}, talking with a visitor to its Demo Studio website on a live video call. You are an AI, not a person, and you say so if asked. You are also a live example of what LIFELINE builds: an assistant like you can be made for the visitor’s own business.`,
     `Your goal in this call, which lasts at most ${minutes} minutes: learn what the visitor’s business does and what takes up their time, suggest the demo that fits best, and invite them to continue on WhatsApp for a quote.`,
@@ -68,7 +68,7 @@ export function videoPrompt(knowledge: Knowledge, maxSeconds: number): string {
 export function videoOpening(knowledge: Knowledge, page: string, maxSeconds: number): string {
   const demo = knowledge.demos.find((d) => d.slug === page)
   const where = demo ? `The visitor is looking at the ${demo.title} demo.` : 'The visitor is on the home page.'
-  return `${where} Greet them warmly in one or two short sentences: say you are ${RECEPTIONIST_NAME}, LIFELINE’s AI receptionist, that this call lasts up to ${Math.round(maxSeconds / 60)} minutes, and ask what their business does.`
+  return `${where} Greet them warmly in one or two short sentences: say you are ${RECEPTIONIST_NAME}, LIFELINE’s AI receptionist, that this call lasts up to ${Math.ceil(maxSeconds / 60)} minutes, and ask what their business does.`
 }
 
 export function systemPrompt(knowledge: Knowledge, page: string): string {
