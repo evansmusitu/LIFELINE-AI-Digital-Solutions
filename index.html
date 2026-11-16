@@ -3,6 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <script>
+      // HTTPS only on the live address. The domain doesn't redirect plain HTTP for these pages, and the
+      // chat's requests over HTTP would fail (worker/http.ts redirects the Worker's own paths).
+      if (location.protocol === 'http:' && location.host === new URL('%SITE_URL%').host) {
+        location.replace('https:' + location.href.slice(5))
+      }
+    </script>
     <!--
       The build (vite.config.ts) puts the page title, description, link-preview text and canonical link
       at the marker below, and fills in the site address from SITE.url in src/config/site.ts. Each demo

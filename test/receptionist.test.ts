@@ -380,7 +380,18 @@ async function handlerChecks() {
   const moved = newAddress(new Request('https://lifeline-demo-studio.freelancer-d62.workers.dev/demos/salon-spa-booking?ref=wa'))
   check('old address: same page, permanently', moved.status === 301 && moved.headers.get('location') === `${SITE.url}/demos/salon-spa-booking?ref=wa`, moved.headers.get('location'))
   const movedPost = newAddress(new Request('https://lifeline-demo-studio.freelancer-d62.workers.dev/api/receptionist', { method: 'POST', body: '{}' }))
-  check('old address: a chat message keeps its method', movedPost.status === 308 && movedPost.headers.get('location') === `${SITE.url}/api/receptionist`)
+  const movedBody = await movedPost.json()
+  check('old address: an open tab’s chat gets a saved-answer reply, not a redirect', movedPost.status === 410 && movedPost.headers.get('location') === null && movedBody.type === 'fallback' && movedBody.reason === 'error', movedBody)
+  // The browser code reads that the same way as an AI outage.
+  const realFetch = globalThis.fetch
+  try {
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) =>
+      newAddress(new Request(new URL(String(input), 'https://lifeline-demo-studio.freelancer-d62.workers.dev'), init))) as typeof fetch
+    const asked = await askReceptionist({ messages: [{ role: 'user', content: 'Hi' }], page: 'home', visitor: '' }, { signal: new AbortController().signal, onText: () => {} })
+    check('old address: the chat shows a saved answer, not "offline"', !asked.ok && asked.reason === 'error', asked)
+  } finally {
+    globalThis.fetch = realFetch
+  }
   check('old address: goes to the live domain', SITE.url === 'https://lifeline.mftintelligence.com')
 
   check('failureReason: quota', failureReason(new Error('InferenceUpstreamError: 4006')) === 'quota')

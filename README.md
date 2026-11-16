@@ -46,11 +46,17 @@ Workers AI Neurons on the Free plan. This site only uses the Worker for chat, vi
 `AI_REPLIES_PER_DAY` caps its AI use.
 
 - **HTTPS.** The domain's "Always Use HTTPS" setting is off, and it is shared with other services, so the site sets
-  `Strict-Transport-Security` itself (`public/_headers` for the pages, `worker/http.ts` for the Worker's answers),
-  and the Worker sends plain-HTTP requests to HTTPS.
+  `Strict-Transport-Security` itself (`public/_headers` for the pages, `worker/http.ts` for the Worker's answers).
+  The Worker sends plain-HTTP requests to HTTPS, and a line at the top of each page does the same for the pages,
+  which are served without running the Worker.
+- **The security check.** The zone runs in "Under Attack" mode, which shows every visitor a "Just a moment..."
+  check, and stops WhatsApp and Facebook from reading link previews. One custom rule in the zone skips only that
+  setting for `lifeline.mftintelligence.com`, as the zone already does for its studio addresses. Browser
+  Integrity Check and the managed firewall rules still apply.
 - **The old address.** The site used to be at `lifeline-demo-studio.freelancer-d62.workers.dev`, in another
   account. That Worker now only sends visitors to the same page here (`worker/old-address.ts`, deployed once with
-  `wrangler.old-address.jsonc`), so links shared earlier keep working.
+  `wrangler.old-address.jsonc`), so links shared earlier keep working. A page left open there from before the
+  switch gets saved answers in the chat.
 
 | Setting | Value |
 |---|---|

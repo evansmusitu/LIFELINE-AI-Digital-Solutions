@@ -14,8 +14,16 @@ export { VideoCalls } from './video-calls'
 
 export function newAddress(request: Request): Response {
   const url = new URL(request.url)
+  // A page left open from before the switch: its chat and call requests can't follow a redirect to
+  // another address (the new one only accepts its own pages). Answer like an AI outage instead, so the
+  // chat shows a saved answer and the call screen says it's unavailable, and no request is "offline".
+  if (url.pathname.startsWith('/api/')) {
+    return new Response(JSON.stringify({ type: 'fallback', reason: 'error', movedTo: SITE.url }), {
+      status: 410,
+      headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+    })
+  }
   const location = `${SITE.url}${url.pathname}${url.search}`
-  // 308 keeps the method, for a chat message sent from a page that was open before the switch.
   const status = request.method === 'GET' || request.method === 'HEAD' ? 301 : 308
   return new Response(null, { status, headers: { location, 'cache-control': 'public, max-age=86400' } })
 }
