@@ -222,6 +222,23 @@ Everything else stays the sample data, and the "Sample business" tag stays.
   name isn't saved with the chat.
 - **Tests.** `test/business-name.test.ts` covers the validator.
 
+## Outreach links
+
+`scripts/outreach/links.mjs` turns a CSV of prospects (business name, demo slug, ref tag) into personalised demo links
+and a short WhatsApp-ready message for each row. It has no dependencies and reads the site address, demo slugs and ref
+tags from the source files, so nothing is copied.
+
+```
+node scripts/outreach/links.mjs scripts/outreach/prospects.example.csv
+```
+
+It warns when a name would be tidied and reports names, demos or tags the site would not accept. The example CSV uses
+invented businesses. `test/outreach-links.test.ts` checks the script against the site's own name rules and lists.
+
+The outreach kit is in `docs/outreach/`: message templates, a walk-in script, answers to common questions, a prospect
+tracker (`prospect-tracker.csv`) and a weekly review checklist. It is plain text outside `public/`, so it is not
+published with the site. The prices in it are numbers to test, not market facts.
+
 ## Where things live
 
 | What | Where |
