@@ -2,8 +2,10 @@
 import { expect, test } from 'vitest'
 import { DEMOS } from '../src/demos/registry'
 import { toKnowledge } from '../src/receptionist/protocol'
-import { failureReason, handleReceptionist, parseRequest } from '../worker/receptionist'
-import { networkKey } from '../worker/http'
+import { aiRepliesPerDay, failureReason, handleReceptionist, parseRequest } from '../worker/receptionist'
+import { httpsRedirect, networkKey } from '../worker/http'
+import { newAddress } from '../worker/old-address'
+import { SITE } from '../src/config/site'
 import { replyStream, thinkFilter } from '../worker/stream'
 import { systemPrompt } from '../worker/prompt'
 import worker from '../worker/index'
@@ -147,6 +149,7 @@ function makeEnv(opts: {
   allowChoice?: boolean
   calls?: RunCall[]
   limitKeys?: string[]
+  aiPerDay?: string
 }) {
   const calls = opts.calls ?? []
   return {
@@ -166,17 +169,20 @@ function makeEnv(opts: {
     },
     AI_MODEL: '@cf/google/gemma-4-26b-a4b-it',
     ALLOW_MODEL_CHOICE: opts.allowChoice ? 'true' : 'false',
+    AI_REPLIES_PER_DAY: opts.aiPerDay ?? '300',
   } as unknown as Env
 }
 
 /** Stand-in for ctx.exports.ChatLimiter. */
-function makeLimiter(opts: { visitorOk?: boolean; networkOk?: boolean; limiterThrows?: boolean; limitKeys?: string[] }) {
+function makeLimiter(opts: { visitorOk?: boolean; networkOk?: boolean; siteOk?: boolean; limiterThrows?: boolean; limitKeys?: string[] }) {
   return {
     getByName: (name: string) => ({
       allow: async (limit: number, perDay: number) => {
         opts.limitKeys?.push(`${name}@${limit}/${perDay}`)
         if (opts.limiterThrows) throw new Error('limiter down')
-        return name.startsWith('visitor:') ? (opts.visitorOk ?? true) : (opts.networkOk ?? true)
+        if (name.startsWith('visitor:')) return opts.visitorOk ?? true
+        if (name.startsWith('site:')) return opts.siteOk ?? true
+        return opts.networkOk ?? true
       },
     }),
   } as unknown as DurableObjectNamespace<ChatLimiter>
@@ -280,6 +286,24 @@ async function handlerChecks() {
   counted = []
   await handle(post({ messages: [] }), { counted })
   check('counts: bad request counts nothing', counted.length === 0, counted)
+
+  // The site's daily AI replies.
+  keys.length = 0
+  await handle(post(goodBody), { limitKeys: keys })
+  check('site cap: checked last, from AI_REPLIES_PER_DAY', keys.at(-1) === 'site:ai-replies@600/300', keys)
+  keys.length = 0
+  await handle(post(goodBody), { limitKeys: keys, aiPerDay: '20' })
+  check('site cap: Previews use their own number', keys.at(-1) === 'site:ai-replies@600/20', keys)
+  keys.length = 0
+  await handle(post(goodBody), { limitKeys: keys, networkOk: false })
+  check('site cap: a refused message doesn’t use a site reply', !keys.some((k) => k.startsWith('site:')), keys)
+  const capCalls: RunCall[] = []
+  counted = []
+  res = await handle(post(goodBody), { siteOk: false, calls: capCalls, counted })
+  body = await res.json()
+  check('site cap: reached gives saved answers, no AI call', res.status === 200 && body.reason === 'quota' && capCalls.length === 0, body)
+  check('counts: site cap is a saved answer', counted.join() === 'chat_started,saved_quota', counted)
+  check('site cap: setting read safely', [aiRepliesPerDay({ AI_REPLIES_PER_DAY: '300' } as Env), aiRepliesPerDay({ AI_REPLIES_PER_DAY: '' } as Env), aiRepliesPerDay({ AI_REPLIES_PER_DAY: 'lots' } as Env), aiRepliesPerDay({ AI_REPLIES_PER_DAY: '-5' } as Env), aiRepliesPerDay({ AI_REPLIES_PER_DAY: '2.5' } as Env)].join() === '300,0,0,0,0')
   res = await handle(
     post(goodBody),
     ({
@@ -341,6 +365,34 @@ async function handlerChecks() {
   check('worker: unknown api is 404 json', res.status === 404 && (await res.json()).error === 'not_found')
   res = await worker.fetch(new Request(`${ORIGIN}/`), makeEnv({}), { exports: { ChatLimiter: makeLimiter({}) } } as unknown as ExecutionContext)
   check('worker: other paths go to assets', (await res.text()) === 'asset')
+
+  // HTTPS only.
+  const plain = httpsRedirect(new Request('http://lifeline.example/stats?x=1'))
+  check('https: plain HTTP moves to HTTPS, same path', plain?.status === 301 && plain.headers.get('location') === 'https://lifeline.example/stats?x=1', plain?.headers.get('location'))
+  check('https: HTTPS stays', httpsRedirect(new Request(`${ORIGIN}/stats`)) === null)
+  check('https: local development stays', httpsRedirect(new Request('http://localhost:8787/api/receptionist')) === null)
+  res = await worker.fetch(new Request('http://lifeline.example/api/receptionist', { method: 'POST' }), makeEnv({}), { exports: { ChatLimiter: makeLimiter({}) } } as unknown as ExecutionContext)
+  check('worker: plain HTTP is redirected before anything runs', res.status === 301, res.status)
+  res = await handle(post(goodBody), {})
+  check('https: Worker responses ask for HTTPS from now on', res.headers.get('strict-transport-security') === 'max-age=31536000')
+
+  // The old address sends every visitor to the same page at the new one.
+  const moved = newAddress(new Request('https://lifeline-demo-studio.freelancer-d62.workers.dev/demos/salon-spa-booking?ref=wa'))
+  check('old address: same page, permanently', moved.status === 301 && moved.headers.get('location') === `${SITE.url}/demos/salon-spa-booking?ref=wa`, moved.headers.get('location'))
+  const movedPost = newAddress(new Request('https://lifeline-demo-studio.freelancer-d62.workers.dev/api/receptionist', { method: 'POST', body: '{}' }))
+  const movedBody = await movedPost.json()
+  check('old address: an open tab’s chat gets a saved-answer reply, not a redirect', movedPost.status === 410 && movedPost.headers.get('location') === null && movedBody.type === 'fallback' && movedBody.reason === 'error', movedBody)
+  // The browser code reads that the same way as an AI outage.
+  const realFetch = globalThis.fetch
+  try {
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) =>
+      newAddress(new Request(new URL(String(input), 'https://lifeline-demo-studio.freelancer-d62.workers.dev'), init))) as typeof fetch
+    const asked = await askReceptionist({ messages: [{ role: 'user', content: 'Hi' }], page: 'home', visitor: '' }, { signal: new AbortController().signal, onText: () => {} })
+    check('old address: the chat shows a saved answer, not "offline"', !asked.ok && asked.reason === 'error', asked)
+  } finally {
+    globalThis.fetch = realFetch
+  }
+  check('old address: goes to the live domain', SITE.url === 'https://lifeline.mftintelligence.com')
 
   check('failureReason: quota', failureReason(new Error('InferenceUpstreamError: 4006')) === 'quota')
   check('failureReason: busy', failureReason(new Error('429 Too Many Requests')) === 'busy')

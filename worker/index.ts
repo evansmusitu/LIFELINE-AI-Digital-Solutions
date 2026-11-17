@@ -1,5 +1,6 @@
 import { EVENT_PATH, STATS_PATH } from '../src/lib/count-events'
 import { RECEPTIONIST_PATH, VIDEO_END_PATH, VIDEO_START_PATH } from '../src/receptionist/protocol'
+import { httpsRedirect } from './http'
 import { handleReceptionist } from './receptionist'
 import { counter, handleEvent } from './stats'
 import { handleStats } from './stats-page'
@@ -15,6 +16,8 @@ export { VideoCalls } from './video-calls'
  */
 export default {
   async fetch(request, env, ctx): Promise<Response> {
+    const insecure = httpsRedirect(request)
+    if (insecure) return insecure
     const { pathname } = new URL(request.url)
     // ctx.exports (not env bindings), so each Preview gets its own Durable Objects.
     const count = counter(ctx.exports.SiteStats, ctx)

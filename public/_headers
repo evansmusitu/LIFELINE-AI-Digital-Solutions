@@ -1,0 +1,6 @@
+# Response headers for the static pages (Cloudflare reads this file; it isn't served).
+# The Worker's own responses (/api/*, /stats) set theirs in worker/http.ts.
+
+# HTTPS only: the domain's "Always Use HTTPS" setting is shared with other services and left as it is.
+/*
+  Strict-Transport-Security: max-age=31536000

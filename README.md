@@ -35,10 +35,28 @@ the pull request.
 
 ## Deploy
 
-The site is hosted on Cloudflare Workers: the static build in `dist/`, plus a small Worker script that answers
-`/api/*` and `/stats` only. Workers Builds builds it from this GitHub repository, and the hosting settings are in `wrangler.jsonc`.
-Static files are free and unlimited on Cloudflare. The Worker uses the Workers Free plan allowance (100,000 requests a
-day).
+The site is live at **https://lifeline.mftintelligence.com**. It is hosted on Cloudflare Workers: the static build in
+`dist/`, plus a small Worker script that answers `/api/*` and `/stats` only. Workers Builds builds it from this
+GitHub repository, and the hosting settings are in `wrangler.jsonc`. Static files are free and unlimited on
+Cloudflare.
+
+The Worker runs in the Cloudflare account that holds `mftintelligence.com`, because a Worker's custom domain must be
+in its own account. That account's other Workers share its daily allowances: 100,000 Worker requests and 10,000
+Workers AI Neurons on the Free plan. This site only uses the Worker for chat, video calls and counts, and
+`AI_REPLIES_PER_DAY` caps its AI use.
+
+- **HTTPS.** The domain's "Always Use HTTPS" setting is off, and it is shared with other services, so the site sets
+  `Strict-Transport-Security` itself (`public/_headers` for the pages, `worker/http.ts` for the Worker's answers).
+  The Worker sends plain-HTTP requests to HTTPS, and a line at the top of each page does the same for the pages,
+  which are served without running the Worker.
+- **The security check.** The zone runs in "Under Attack" mode, which shows every visitor a "Just a moment..."
+  check, and stops WhatsApp and Facebook from reading link previews. One custom rule in the zone skips only that
+  setting for `lifeline.mftintelligence.com`, as the zone already does for its studio addresses. Browser
+  Integrity Check and the managed firewall rules still apply.
+- **The old address.** The site used to be at `lifeline-demo-studio.freelancer-d62.workers.dev`, in another
+  account. That Worker now only sends visitors to the same page here (`worker/old-address.ts`, deployed once with
+  `wrangler.old-address.jsonc`), so links shared earlier keep working. A page left open there from before the
+  switch gets saved answers in the chat.
 
 | Setting | Value |
 |---|---|
@@ -54,7 +72,8 @@ day).
 Every merge into `main` goes live. Every push to another branch creates a Preview, and Cloudflare posts its link on
 the pull request. Preview links on `workers.dev` are public but tell search engines not to index them.
 
-A custom domain needs the domain's DNS to be managed by Cloudflare (the free plan is enough).
+The production address is the `routes` entry in `wrangler.jsonc`. Cloudflare creates its DNS record and certificate
+on deploy.
 
 ### Links and pages
 
@@ -83,8 +102,8 @@ lettering is unreadable below about 120 px. If the logo changes, regenerate both
 changes, raise the `?v=` number on its `og:image` tag in `index.html`, so apps that cached the old image fetch the
 new one.
 
-If the site moves to another address, change `url` in `src/config/site.ts`. Link previews, canonical links and the
-sitemap all use it.
+If the site moves to another address, change `url` in `src/config/site.ts` (link previews, canonical links, the
+sitemap and shared demo links all use it) and the `routes` entry in `wrangler.jsonc`.
 
 ## AI receptionist
 
@@ -99,10 +118,12 @@ their questions filled in.
 - **Facts.** The prompt uses the same text as the website: `src/config/site.ts`, `src/config/about.ts`, and the demo
   list, which the build writes to `dist/receptionist-knowledge.json` from `src/demos/registry.ts`. A new demo is
   known to the receptionist as soon as it is on the site.
-- **Cost: $0.** On the Workers Free plan, Workers AI includes 10,000 Neurons a day (reset at 00:00 UTC). Past that,
-  Cloudflare refuses the call instead of billing for it. One reply uses an estimated 20 to 25 Neurons (about 2,000
-  tokens of instructions and facts, plus the reply), so roughly 400 replies a day. Moving the account to the Workers Paid plan would change this: usage past the allowance would then be
-  billed.
+- **Cost: $0.** Every Cloudflare account includes 10,000 Workers AI Neurons a day (reset at 00:00 UTC), shared by
+  all its Workers. On the Workers Free plan, calls past that are refused instead of billed; on Workers Paid they are
+  billed. One reply uses an estimated 20 to 25 Neurons (about 2,000 tokens of instructions and facts, plus the
+  reply). So the whole site stops at `AI_REPLIES_PER_DAY` replies a day (300, about 7,500 Neurons; each Preview
+  20), then answers from saved replies until midnight UTC. That keeps it inside the allowance on either plan, with
+  room for the account's other Workers. When this cap was set, none of them used Workers AI.
 - **Saved answers.** When there is no AI reply (allowance used up, too many messages, offline or an error), the browser
   answers from `src/receptionist/fallback.ts` and labels it "Saved answer". The chat never stops working.
 - **Limits.** Per visitor: 8 messages a minute and 40 a day. Per network (an IPv4 address, or an IPv6 /64, which

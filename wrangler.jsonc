@@ -3,9 +3,11 @@
 	// Must match the Worker name in the Cloudflare dashboard, or Workers Builds fails.
 	"name": "lifeline-demo-studio",
 	"compatibility_date": "2026-11-15",
-	// Serve production on lifeline-demo-studio.<subdomain>.workers.dev, and give each
-	// pull request Preview its own workers.dev link.
-	"workers_dev": true,
+	// Production is served on lifeline.mftintelligence.com only. The domain must be in the same
+	// Cloudflare account as the Worker; Cloudflare creates its DNS record and certificate. Each pull
+	// request Preview gets its own workers.dev link, which tells search engines not to index it.
+	"routes": [{ "pattern": "lifeline.mftintelligence.com", "custom_domain": true }],
+	"workers_dev": false,
 	"preview_urls": true,
 	// The Worker script answers /api/* (the AI receptionist, video calls and counts) and the private
 	// /stats page only. Every other request is a static file from the Vite build, which Cloudflare
@@ -19,8 +21,9 @@
 		"not_found_handling": "single-page-application",
 		"run_worker_first": ["/api/*", "/stats"],
 	},
-	// Workers AI. On the Workers Free plan it includes 10,000 Neurons a day. Past that, calls
-	// fail instead of being billed, and the receptionist switches to its saved answers.
+	// Workers AI. Every account includes 10,000 Neurons a day, shared by all its Workers. On the
+	// Workers Free plan, calls past that fail instead of being billed; on Workers Paid they are billed.
+	// AI_REPLIES_PER_DAY keeps this site well inside the allowance either way.
 	"ai": { "binding": "AI" },
 	// ChatLimiter: message limits per minute and per day (worker/limiter.ts), so one visitor or one
 	// network can't use up the day's free AI allowance. VideoCalls: starts and ends video calls and
@@ -36,6 +39,9 @@
 		"AI_MODEL": "@cf/google/gemma-4-26b-a4b-it",
 		// "true" lets a request pick another model from the list in worker/receptionist.ts. Previews only.
 		"ALLOW_MODEL_CHOICE": "false",
+		// AI replies a day for the whole site, about 25 Neurons each: 300 is about 7,500 Neurons, leaving
+		// room for Previews and the account's other Workers. Past it, visitors get saved answers. "0" turns AI off.
+		"AI_REPLIES_PER_DAY": "300",
 		// Video calls with Tari. Created by scripts/napster-setup.mjs.
 		"NAPSTER_AGENT_ID": "8c898d9e-1056-4587-8972-7dde8ea92856",
 		// Total Napster spend allowed, across the live site, Previews and tests together. "0" turns calls off.
@@ -59,6 +65,8 @@
 		"vars": {
 			"AI_MODEL": "@cf/google/gemma-4-26b-a4b-it",
 			"ALLOW_MODEL_CHOICE": "true",
+			// Each Preview counts its own replies, so keep this small: Previews share the account's allowance.
+			"AI_REPLIES_PER_DAY": "20",
 			"NAPSTER_AGENT_ID": "bc89d6ff-e2d8-4a1e-8cf1-536f4ace96a5",
 			"VIDEO_BUDGET_USD": "40",
 			"VIDEO_CALLS_PER_DAY": "20",
