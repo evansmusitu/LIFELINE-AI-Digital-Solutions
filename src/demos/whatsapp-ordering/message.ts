@@ -3,8 +3,8 @@ import { BUSINESS, STATUS_FLOW } from './data'
 import type { Order, OrderStatus } from './types'
 
 /** The order as it arrives on the shop's WhatsApp. Uses WhatsApp formatting: *bold*. */
-export function orderMessage(order: Order): string {
-  const out = [`*New order ${order.ref}*`, BUSINESS, '']
+export function orderMessage(order: Order, business: string = BUSINESS): string {
+  const out = [`*New order ${order.ref}*`, business, '']
   for (const line of order.lines) out.push(`• ${line.qty} × ${line.name}: ${money(line.qty * line.unitPrice)}`)
   out.push('', `Subtotal: ${money(order.subtotal)}`)
   out.push(order.method === 'delivery' ? `Delivery to ${order.area}: ${money(order.deliveryFee)}` : 'Collection from the Avondale shop: free')
@@ -28,11 +28,16 @@ export function demoOrderEnquiry(order: Order): string {
   ].join('\n')
 }
 
-export function statusMessage(order: Order, status: OrderStatus): string {
+/** A saved status update as shown to a visitor on a personalised link: the sample business name becomes theirs. */
+export function personalised(text: string, business: string): string {
+  return business === BUSINESS ? text : text.replaceAll(BUSINESS, business)
+}
+
+export function statusMessage(order: Order, status: OrderStatus, business: string = BUSINESS): string {
   const first = order.customer.split(' ')[0]
   switch (status) {
     case 'Confirmed':
-      return `Hi ${first}, thanks for ordering from Jacaranda & Rye. Order ${order.ref} is confirmed: ${money(order.total)}, ${order.time.toLowerCase()}. We’ll message you when it’s ${order.method === 'delivery' ? 'on the way' : 'ready'}.`
+      return `Hi ${first}, thanks for ordering from ${business}. Order ${order.ref} is confirmed: ${money(order.total)}, ${order.time.toLowerCase()}. We’ll message you when it’s ${order.method === 'delivery' ? 'on the way' : 'ready'}.`
     case 'Preparing':
       return `Good news, ${first}: we’re preparing order ${order.ref} now.`
     case 'Out for delivery':

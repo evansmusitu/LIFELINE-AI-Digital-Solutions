@@ -1,5 +1,6 @@
 import { Ban, CircleCheck, Coffee, Send, ShieldCheck, Sparkles, StickyNote, UserCheck, UserX, Wallet } from 'lucide-react'
 import { useState } from 'react'
+import { useBusinessName } from '../../lib/business-name'
 import { cn } from '../../lib/cn'
 import { clockTime, dayAndTime, duration, firstName, hoursLabel, money, moneyWhole } from '../../lib/format'
 import { MINUTE } from '../../lib/time'
@@ -49,6 +50,7 @@ interface Props {
 }
 
 export function CalendarScreen({ appointments, clients, now, focus, onCheckIn, onComplete, onNoShow, onCancel, onRemind }: Props) {
+  const salon = useBusinessName(SALON.short)
   const days = openDays(now, 7)
   const visitor = clients.find((c) => c.isVisitor)
   const yours = appointments
@@ -153,7 +155,7 @@ export function CalendarScreen({ appointments, clients, now, focus, onCheckIn, o
         </ul>
       </Panel>
 
-      <Panel title={isToday ? 'Today' : dayLabel(day)} description={`${SALON.short} is open ${hhmm(SALON.open)} to ${hhmm(SALON.close)}`} bodyClassName="p-0!">
+      <Panel title={isToday ? 'Today' : dayLabel(day)} description={`${salon} is open ${hhmm(SALON.open)} to ${hhmm(SALON.close)}`} bodyClassName="p-0!">
         <div className="hidden md:block">
           <div className="grid grid-cols-[3rem_repeat(4,minmax(0,1fr))] border-b border-slate-200">
             <div />

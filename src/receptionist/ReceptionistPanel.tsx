@@ -14,10 +14,11 @@ import {
 } from 'react'
 import { Button, WhatsAppButton } from '../components/Button'
 import { ErrorBoundary } from '../components/ErrorBoundary'
+import { useBusinessName } from '../lib/business-name'
 import { cn } from '../lib/cn'
 import { paths } from '../lib/router'
 import { usePersistentState } from '../lib/storage'
-import { cleanReply, replyParts, spokenText, suggestions, whatsappSummary, type ChatMessage } from './chat'
+import { cleanReply, replyParts, shownText, spokenText, suggestions, whatsappSummary, type ChatMessage } from './chat'
 import { PANEL_FRAME } from './frame'
 import { LIMITS, RECEPTIONIST_NAME } from './protocol'
 import type { ViewRequest } from './receptionist-context'
@@ -464,6 +465,7 @@ function ReplyText({ text, onDemoLink }: { text: string; onDemoLink: () => void 
 }
 
 function Bubble({ message, onDemoLink, streaming }: { message: ChatMessage; onDemoLink: () => void; streaming?: boolean }) {
+  const businessName = useBusinessName()
   if (message.role === 'note') {
     return (
       <p className="mx-auto w-fit max-w-[92%] rounded-2xl bg-white/5 px-3 py-1.5 text-center text-xs leading-snug text-mist-300">
@@ -481,7 +483,7 @@ function Bubble({ message, onDemoLink, streaming }: { message: ChatMessage; onDe
         )}
       >
         <span className="sr-only">{mine ? 'You: ' : `${RECEPTIONIST_NAME}: `}</span>
-        {mine ? message.text : <ReplyText text={message.text} onDemoLink={onDemoLink} />}
+        {mine ? message.text : <ReplyText text={shownText(message, businessName)} onDemoLink={onDemoLink} />}
         {streaming && <span aria-hidden="true" className="ml-0.5 inline-block h-4 w-1.5 translate-y-0.5 animate-pulse rounded-sm bg-brand-cyan" />}
       </p>
       {message.source === 'saved' && <span className="mt-1 ml-1 text-[0.7rem] text-mist-400">Saved answer</span>}

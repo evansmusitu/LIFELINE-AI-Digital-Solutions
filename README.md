@@ -217,12 +217,55 @@ the phone's share menu, or by copying the link). The footer tells visitors.
   day to delete the oldest day. A tap or share also goes through the per-network limit, which adds about the same
   again. The Workers Free plan includes 100,000 Durable Object requests and 100,000 rows written a day, shared with
   the message limiter and video calls. Requests refused by a limit aren't counted, so they cost what they did before.
+- **Source tags.** A link ending `?ref=walk-in` (also `status`, `tiktok`, `facebook`, `instagram`, `referral`, `flyer`)
+  counts one arrival under that tag in the "Arrived from a tagged link" column of `/stats`. Any other tag counts as
+  `other`, and the text itself is never sent or stored, so the stored events stay a fixed set. A link with a valid
+  `?for=` name also counts one "Personalised links opened", without the name. Each is counted once per tab session
+  (a flag in `sessionStorage`; a new tab counts again, a reload does not). These go through `/api/event`, so they
+  share the per-network limit (at most 2 of the 100 a day) and cost the same Durable Object requests as a tap.
+  Trade-off: chats started are counted by the Worker, so tying them to a tag would mean sending the tag to the
+  Worker with every message. That is skipped. WhatsApp taps are not split by tag either, as that would multiply the
+  stored events by the number of tags.
 - **Reading them.** Open `/stats` on the live site and enter the passcode. The page shows video call spending, the
   last 14 days and every total since counting began. Previews keep their own totals. Passcode tries, right or wrong,
   are limited to 10 a minute and 60 a day per network.
 - **The passcode.** Only its SHA-256 is in `wrangler.jsonc` (`STATS_PASSCODE_SHA256`), which is safe in a public
   repository because the passcode is 20 random characters. To change it, run `npm run stats-passcode`, put the new
   hash in both `vars` and `previews.vars`, and merge. Set it to `""` to remove the page.
+
+## Personalised demo links
+
+Add `?for=` and a business name to a link and the visitor sees their own business in the demo, for example
+`/demos/whatsapp-ordering?for=Mama%27s+Kitchen` (a space can be `+` or `%20`). The name replaces the sample business
+name in the WhatsApp ordering and salon booking demos, adds a line to the home page, and Tari's greeting welcomes it.
+Everything else stays the sample data, and the "Sample business" tag stays.
+
+- **Validation.** `src/lib/business-name.ts` trims the name, collapses spaces and accepts up to 40 characters: letters
+  (including accented ones), digits, spaces and `' ’ & . , ! ( ) -`. Anything else (for example `<`, `>`, quotes,
+  slashes or control characters), a name with no letter or digit, or an empty value is ignored, and the page shows the
+  normal sample name. The name is only ever drawn as React text.
+- **Privacy.** The name stays in the browser. It is kept in `sessionStorage` for the tab, so it survives moving between
+  pages and goes when the tab closes. It is never put in `localStorage` or a cookie, never sent to the Worker, the
+  totals or the AI prompt, and never added to the WhatsApp summary. Tari's greeting is changed when it is drawn, so the
+  name isn't saved with the chat.
+- **Tests.** `test/business-name.test.ts` covers the validator.
+
+## Outreach links
+
+`scripts/outreach/links.mjs` turns a CSV of prospects (business name, demo slug, ref tag) into personalised demo links
+and a short WhatsApp-ready message for each row. It has no dependencies and reads the site address, demo slugs and ref
+tags from the source files, so nothing is copied.
+
+```
+node scripts/outreach/links.mjs scripts/outreach/prospects.example.csv
+```
+
+It warns when a name would be tidied and reports names, demos or tags the site would not accept. The example CSV uses
+invented businesses. `test/outreach-links.test.ts` checks the script against the site's own name rules and lists.
+
+The outreach kit is in `docs/outreach/`: message templates, a walk-in script, answers to common questions, a prospect
+tracker (`prospect-tracker.csv`) and a weekly review checklist. It is plain text outside `public/`, so it is not
+published with the site. The prices in it are numbers to test, not market facts.
 
 ## Where things live
 

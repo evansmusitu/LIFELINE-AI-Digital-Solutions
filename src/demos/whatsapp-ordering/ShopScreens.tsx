@@ -1,10 +1,11 @@
 import { Bike, ClipboardCopy, Clock, MessageCircle, Receipt, ShoppingBag, Store, Wallet } from 'lucide-react'
 import { useState } from 'react'
+import { useBusinessName } from '../../lib/business-name'
 import { cn } from '../../lib/cn'
 import { clockTime, money } from '../../lib/format'
 import { AppButton, Badge, Modal, Stat, Toggle, type Tone } from '../ui'
-import { CATEGORIES } from './data'
-import { nextStatus, orderMessage } from './message'
+import { BUSINESS, CATEGORIES } from './data'
+import { nextStatus, orderMessage, personalised } from './message'
 import { PhoneChat, ProductIcon, WhatsAppText } from './parts'
 import type { Order, OrderStatus, Product } from './types'
 
@@ -34,6 +35,7 @@ interface OrdersProps {
 }
 
 export function OrdersScreen({ orders, onAdvance, onCopy }: OrdersProps) {
+  const business = useBusinessName(BUSINESS)
   const [filter, setFilter] = useState<Filter>('open')
   const [viewing, setViewing] = useState<string | null>(null)
   const sorted = [...orders].sort((a, b) => b.at - a.at)
@@ -107,7 +109,7 @@ export function OrdersScreen({ orders, onAdvance, onCopy }: OrdersProps) {
               {lastUpdate && (
                 <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-green-50 px-2.5 py-1.5 text-xs text-green-900">
                   <MessageCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                  Sent {clockTime(lastUpdate.at)}: {lastUpdate.text}
+                  Sent {clockTime(lastUpdate.at)}: {personalised(lastUpdate.text, business)}
                 </p>
               )}
               <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
@@ -143,7 +145,7 @@ export function OrdersScreen({ orders, onAdvance, onCopy }: OrdersProps) {
         description="The order as it arrived, and the updates sent back."
         footer={
           viewed && (
-            <AppButton variant="secondary" icon={ClipboardCopy} onClick={() => onCopy(orderMessage(viewed))}>
+            <AppButton variant="secondary" icon={ClipboardCopy} onClick={() => onCopy(orderMessage(viewed, business))}>
               Copy order
             </AppButton>
           )
@@ -152,12 +154,12 @@ export function OrdersScreen({ orders, onAdvance, onCopy }: OrdersProps) {
         {viewed && (
           <PhoneChat title={viewed.customer} subtitle="Customer">
             <div className="max-w-[88%] rounded-lg rounded-tl-none bg-white px-3 py-2 text-[0.82rem] leading-relaxed text-slate-900 shadow-sm">
-              <WhatsAppText text={orderMessage(viewed)} />
+              <WhatsAppText text={orderMessage(viewed, business)} />
               <span className="mt-1 block text-right text-[0.65rem] text-slate-500">{clockTime(viewed.at)}</span>
             </div>
             {viewed.updates.map((u) => (
               <div key={u.at + u.text} className="ml-auto max-w-[88%] rounded-lg rounded-tr-none bg-[#d9fdd3] px-3 py-2 text-[0.82rem] text-slate-900 shadow-sm">
-                {u.text}
+                {personalised(u.text, business)}
                 <span className="mt-1 block text-right text-[0.65rem] text-slate-500">{clockTime(u.at)}</span>
               </div>
             ))}

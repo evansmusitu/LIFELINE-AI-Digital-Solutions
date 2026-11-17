@@ -212,10 +212,10 @@ test('stats report', () => {
   check('report: one row per day, gaps filled', dayRows.length === TABLE_DAYS, dayRows.length)
   check('report: newest day first', dayRows[0].includes('2026-11-30') && dayRows[TABLE_DAYS - 1].includes('2026-11-17'))
   const cells = (row: string) => [...row.matchAll(/<td>(\d+)<\/td>/g)].map((m) => Number(m[1]))
-  check('report: a day’s columns', cells(dayRows[0]).join() === '3,9,2,0,0,1,0,0,1', cells(dayRows[0]))
+  check('report: a day’s columns', cells(dayRows[0]).join() === '3,9,2,0,0,1,0,0,1,0,0', cells(dayRows[0]))
   check('report: an empty day is zeros', cells(dayRows[1]).every((n) => n === 0))
   const totals = html.match(/<tr class="total">.*?<\/tr>/gs) ?? []
-  check('report: 14-day total', cells(totals[0]).join() === '3,9,2,2,4,1,0,5,1', cells(totals[0]))
+  check('report: 14-day total', cells(totals[0]).join() === '3,9,2,2,4,1,0,5,1,0,0', cells(totals[0]))
   check('report: all-time total includes older days', totals[1].includes('Since 2026-10-01') && cells(totals[1])[0] === 13, totals[1])
   check('report: spending', html.includes('$1.52') && html.includes('$0.23') && html.includes('$38.25') && html.includes('$40.00'))
   check('report: calls today', html.includes('<strong>3</strong> of 20'))

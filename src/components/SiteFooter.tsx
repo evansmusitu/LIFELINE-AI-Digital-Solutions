@@ -69,7 +69,7 @@ export function SiteFooter() {
           <p>
             <span className="font-semibold text-mist-300">Privacy.</span> This site uses no cookies and doesn’t track
             you. We count daily totals only, such as how many chats and video calls start and how many WhatsApp buttons
-            are tapped, never who did what. To stop misuse, the chat, video calls and these counts are limited per
+            are tapped, and which kind of link a visit came from, never who did what. To stop misuse, the chat, video calls and these counts are limited per
             network each day.
             Anything you type into a demo is saved only in your own browser, so the demo remembers it next
             time, and Reset demo clears it. Chat messages to our AI receptionist are processed by our AI provider to write

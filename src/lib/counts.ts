@@ -1,5 +1,6 @@
 import { SITE } from '../config/site'
-import { EVENT_PATH, type PageEvent } from './count-events'
+import { parseBusinessName } from './business-name'
+import { EVENT_PATH, refEvent, type PageEvent } from './count-events'
 
 /*
  * Counts WhatsApp taps and demo shares as daily totals (src/lib/count-events.ts). Each count sends
@@ -57,4 +58,30 @@ export function startCounting(): void {
     const found = linkEvent(link.href, link.closest('[data-count-source]')?.getAttribute('data-count-source') ?? null)
     if (found) countEvent(found)
   })
+}
+
+const ARRIVAL_FLAG = 'lifeline.arrival'
+let arrivalDone = false
+
+/**
+ * Counts how a visit arrived, once per tab session: the kind of link (?ref=, from a fixed list, never the
+ * text itself) and whether it was a personalised link (?for=, the name is never sent). A flag in
+ * sessionStorage stops a reload or a second page in the same tab counting again; a new tab counts again.
+ */
+export function countArrival(search: string = window.location.search): void {
+  if (arrivalDone) return
+  arrivalDone = true
+  const params = new URLSearchParams(search)
+  const events: PageEvent[] = []
+  const ref = refEvent(params.get('ref'))
+  if (ref) events.push(ref)
+  if (parseBusinessName(params.get('for'))) events.push('link_personalised')
+  if (!events.length) return
+  try {
+    if (window.sessionStorage.getItem(ARRIVAL_FLAG)) return
+    window.sessionStorage.setItem(ARRIVAL_FLAG, '1')
+  } catch {
+    // Storage blocked: count once for this page load only.
+  }
+  events.forEach(countEvent)
 }
