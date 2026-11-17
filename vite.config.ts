@@ -120,7 +120,7 @@ function studioPages(): Plugin {
       this.emitFile({
         type: 'asset',
         fileName: 'robots.txt',
-        source: `User-agent: *\nAllow: /\n\nSitemap: ${site.url}/sitemap.xml\n`,
+        source: `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /stats\n\nSitemap: ${site.url}/sitemap.xml\n`,
       })
 
       // The demo list the AI receptionist answers from (worker/receptionist.ts reads it). Built from

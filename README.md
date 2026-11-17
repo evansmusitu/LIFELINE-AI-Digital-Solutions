@@ -88,6 +88,34 @@ redirected to the clean link when the page opens.
 Another static host works if it serves `demos/<slug>.html` at `/demos/<slug>` and sends unknown paths to
 `index.html`. The site must be served from the root of its address.
 
+## Search engines
+
+`npm run build` writes `dist/sitemap.xml` (the home page and every demo) and `dist/robots.txt` (everything allowed
+except `/api/` and `/stats`, plus a pointer to the sitemap). Both come from the `studioPages` plugin in
+`vite.config.ts` and use `url` in `src/config/site.ts`.
+
+**Bing, Yandex and others (IndexNow).** The key file `public/<key>.txt` proves the site is ours. After a deploy:
+
+```
+npm run indexnow -- --dry-run   # show what would be sent
+npm run indexnow                # send the pages from dist/sitemap.xml (run npm run build first)
+npm run indexnow -- --live      # send the pages from the live sitemap instead
+```
+
+The script checks that the key file is live before sending and says in plain words what the answer means.
+Google does not use IndexNow.
+
+**Google Search Console** (checklist, needs the owner's Google account):
+
+- [ ] Add a URL-prefix property for `https://lifeline.mftintelligence.com/`.
+- [ ] Verify with the HTML tag method: add the `<meta name="google-site-verification" content="...">` tag to `index.html`, deploy, then click Verify.
+- [ ] Under Sitemaps, submit `sitemap.xml`.
+
+**Bing Webmaster Tools:**
+
+- [ ] Sign in and either import the site from Google Search Console, or add it and verify with a `<meta name="msvalidate.01" content="...">` tag in `index.html`.
+- [ ] Under Sitemaps, submit `https://lifeline.mftintelligence.com/sitemap.xml`.
+
 ## Logo
 
 `public/logo.png` is the master logo (768 px). The pages use smaller copies made from it:
