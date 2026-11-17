@@ -1,6 +1,7 @@
 import { CalendarDays, CalendarPlus, ChartColumn, Gift, Scissors, Users } from 'lucide-react'
 import { useState } from 'react'
 import { useToast } from '../../components/toast-context'
+import { useBusinessName } from '../../lib/business-name'
 import { clockTime, duration, firstName, money, moneyWhole, num } from '../../lib/format'
 import { usePersistentState } from '../../lib/storage'
 import { uid, useDemoClock, useTicker } from '../../lib/time'
@@ -49,6 +50,7 @@ const PHONE_MINUTES = 6
 type ScreenId = 'book' | 'calendar' | 'clients' | 'loyalty' | 'reports'
 
 export default function SalonSpaBookingDemo() {
+  const businessName = useBusinessName()
   const clock = useDemoClock(9, 30)
   const now = useTicker(clock)
   const toast = useToast()
@@ -253,7 +255,11 @@ export default function SalonSpaBookingDemo() {
   return (
     <DemoAppShell
       slug={SLUG}
-      business={{ name: SALON.name, descriptor: 'Hair, nails and spa · Parkhurst, Johannesburg', icon: Scissors }}
+      business={{
+        name: businessName ?? SALON.name,
+        descriptor: businessName ? 'Your business, sample data' : 'Hair, nails and spa · Parkhurst, Johannesburg',
+        icon: Scissors,
+      }}
       accent={ACCENT}
       screens={screens}
       active={screen}

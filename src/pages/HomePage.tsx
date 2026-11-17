@@ -6,6 +6,7 @@ import { WhatsAppIcon } from '../components/WhatsAppIcon'
 import { ABOUT, PRINCIPLES, PROCESS_STEPS } from '../config/about'
 import { SERVICES, SITE } from '../config/site'
 import { DEMOS, INDUSTRIES, type DemoMeta, type Industry } from '../demos/registry'
+import { useBusinessName } from '../lib/business-name'
 import { cn } from '../lib/cn'
 import { EMAIL_ENQUIRY_URL } from '../lib/email'
 import { paths } from '../lib/router'
@@ -102,6 +103,7 @@ function MeetTari({ compact }: { compact?: boolean }) {
 }
 
 function Hero() {
+  const businessName = useBusinessName()
   return (
     <section className="relative overflow-hidden">
       <div
@@ -120,6 +122,11 @@ function Hero() {
           >
             {SITE.headline} <span className="text-gradient">{SITE.headlineCta}</span>
           </h1>
+          {businessName && (
+            <p className="mt-5 max-w-2xl text-base font-semibold text-brand-cyan sm:text-lg">
+              Hi {businessName}, here is a sample of what we could build for you. The demos use invented sample data.
+            </p>
+          )}
           <p className="mt-5 max-w-2xl text-base text-mist-200 sm:text-lg">
             Click through working demos of the chatbots, automations and business systems we build. Each one runs on
             sample data, so you can explore freely and picture it with your own brand.

@@ -196,6 +196,23 @@ the phone's share menu, or by copying the link). The footer tells visitors.
   repository because the passcode is 20 random characters. To change it, run `npm run stats-passcode`, put the new
   hash in both `vars` and `previews.vars`, and merge. Set it to `""` to remove the page.
 
+## Personalised demo links
+
+Add `?for=` and a business name to a link and the visitor sees their own business in the demo, for example
+`/demos/whatsapp-ordering?for=Mama%27s+Kitchen` (a space can be `+` or `%20`). The name replaces the sample business
+name in the WhatsApp ordering and salon booking demos, adds a line to the home page, and Tari's greeting welcomes it.
+Everything else stays the sample data, and the "Sample business" tag stays.
+
+- **Validation.** `src/lib/business-name.ts` trims the name, collapses spaces and accepts up to 40 characters: letters
+  (including accented ones), digits, spaces and `' ’ & . , ! ( ) -`. Anything else (for example `<`, `>`, quotes,
+  slashes or control characters), a name with no letter or digit, or an empty value is ignored, and the page shows the
+  normal sample name. The name is only ever drawn as React text.
+- **Privacy.** The name stays in the browser. It is kept in `sessionStorage` for the tab, so it survives moving between
+  pages and goes when the tab closes. It is never put in `localStorage` or a cookie, never sent to the Worker, the
+  totals or the AI prompt, and never added to the WhatsApp summary. Tari's greeting is changed when it is drawn, so the
+  name isn't saved with the chat.
+- **Tests.** `test/business-name.test.ts` covers the validator.
+
 ## Where things live
 
 | What | Where |

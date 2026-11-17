@@ -28,6 +28,15 @@ export function greeting(page: string): ChatMessage {
   return { id: GREETING_ID, role: 'assistant', text, source: 'ai' }
 }
 
+/**
+ * The greeting as shown: welcomes the visitor's business when they came from a personalised link.
+ * Applied when drawing the bubble, so the name is never stored in the saved chat or sent anywhere.
+ */
+export function shownText(message: ChatMessage, businessName: string | null): string {
+  if (message.id !== GREETING_ID || !businessName) return message.text
+  return message.text.replace(/^Hi, /, `Hi, welcome ${businessName}! `)
+}
+
 export function pageNote(page: string): string {
   const title = demoTitle(page)
   return title ? `You’re now on the ${title} demo.` : 'You’re back on the home page.'

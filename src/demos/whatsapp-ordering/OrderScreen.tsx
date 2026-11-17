@@ -1,10 +1,11 @@
 import { ArrowLeft, Bike, CircleCheck, ClipboardCopy, Info, Pencil, Store, Trash2, WandSparkles } from 'lucide-react'
 import { useId, useState, type FormEvent } from 'react'
 import { WhatsAppIcon } from '../../components/WhatsAppIcon'
+import { useBusinessName } from '../../lib/business-name'
 import { money } from '../../lib/format'
 import { whatsappUrl } from '../../lib/whatsapp'
 import { AppButton, Field, Notice, Panel, QtyStepper, Segmented, SelectInput, TextArea, TextInput } from '../ui'
-import { AREAS, MIN_DELIVERY_ORDER, NEXT_DAY_PRODUCTS, PAYMENTS, TIMES_TODAY, TIMES_TOMORROW } from './data'
+import { AREAS, BUSINESS, MIN_DELIVERY_ORDER, NEXT_DAY_PRODUCTS, PAYMENTS, TIMES_TODAY, TIMES_TOMORROW } from './data'
 import { demoOrderEnquiry, orderMessage } from './message'
 import { PhoneChat, ProductIcon, WhatsAppText } from './parts'
 import type { CartLine, Details, Order, Product } from './types'
@@ -243,10 +244,11 @@ function DetailsForm({ products, cart, details, onSetQty, onDetails, onPreview, 
 }
 
 function Preview({ draft, onBack, onPlace, onCopy }: Props & { draft: Order }) {
-  const message = orderMessage(draft)
+  const business = useBusinessName(BUSINESS)
+  const message = orderMessage(draft, business)
   return (
     <div className="grid grid-cols-1 gap-6 p-3 sm:p-6 lg:grid-cols-[1fr_22rem] lg:items-start">
-      <PhoneChat title="Jacaranda & Rye Bakehouse" subtitle="Business account">
+      <PhoneChat title={business} subtitle="Business account">
         <p className="mx-auto w-fit rounded-md bg-white/80 px-2 py-0.5 text-[0.7rem] text-slate-600">Today</p>
         <div className="ml-auto max-w-[88%] rounded-lg rounded-tr-none bg-[#d9fdd3] px-3 py-2 text-[0.82rem] leading-relaxed text-slate-900 shadow-sm">
           <WhatsAppText text={message} />

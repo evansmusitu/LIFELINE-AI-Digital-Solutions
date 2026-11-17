@@ -1,5 +1,6 @@
 import { CalendarHeart, CircleCheck, Coins, Copy, Gift, Info, MessageCircle, UserPlus } from 'lucide-react'
 import { useToast } from '../../components/toast-context'
+import { useBusinessName } from '../../lib/business-name'
 import { num } from '../../lib/format'
 import { appButton } from '../styles'
 import { AppButton, Notice, Panel } from '../ui'
@@ -29,6 +30,7 @@ interface Props {
 
 export function LoyaltyScreen({ client, sample, appointments, onRedeem }: Props) {
   const toast = useToast()
+  const salon = useBusinessName(SALON.short)
   const s = clientSummary(client)
   const next = nextReward(s.balance)
   const nextTier = TIERS.find((t) => t.from > s.earned)
@@ -56,7 +58,7 @@ export function LoyaltyScreen({ client, sample, appointments, onRedeem }: Props)
         <section aria-label="Loyalty card" className="rounded-2xl bg-linear-to-br from-(--accent) to-(--accent-ink) p-5 text-white shadow-md">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-xs font-semibold tracking-wide text-white/90 uppercase">{SALON.short} rewards</p>
+              <p className="text-xs font-semibold tracking-wide text-white/90 uppercase">{salon} rewards</p>
               <p className="mt-0.5 text-lg font-bold break-words">{sample ? client.name : `${client.name} (you)`}</p>
             </div>
             <TierBadge tier={s.tier} />

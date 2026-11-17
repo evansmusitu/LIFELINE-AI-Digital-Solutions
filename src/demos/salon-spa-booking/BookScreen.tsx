@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowRight, CalendarCheck, CalendarDays, Check, CircleCheck, CreditCard, Download, Info, Lock, Users } from 'lucide-react'
 import { useEffect, useRef, useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from 'react'
+import { useBusinessName } from '../../lib/business-name'
 import { cn } from '../../lib/cn'
 import { clockTime, duration, firstName, money, moneyWhole } from '../../lib/format'
 import { MINUTE } from '../../lib/time'
@@ -523,6 +524,7 @@ interface ConfirmationProps {
 }
 
 function Confirmation({ appt, name, phone, onAnother, onShowInCalendar }: ConfirmationProps) {
+  const salon = useBusinessName(SALON.short)
   const bill = billFor(appt)
   const points = pointsFor(appt.price, appt.start)
   // Messages keep the time the booking was made.
@@ -595,7 +597,7 @@ function Confirmation({ appt, name, phone, onAnother, onShowInCalendar }: Confir
         }
       >
         {plan ? (
-          <WhatsAppBubble text={clientMessage(appt, name, appt.createdAt)} meta={`${SALON.short} · ${clockTime(plan.at)}`} />
+          <WhatsAppBubble text={clientMessage(appt, name, appt.createdAt)} meta={`${salon} · ${clockTime(plan.at)}`} />
         ) : (
           <p className="text-sm text-slate-700">You chose not to get a reminder. The booking is still in your calendar file.</p>
         )}

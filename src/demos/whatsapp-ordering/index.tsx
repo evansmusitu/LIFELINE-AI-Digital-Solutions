@@ -2,12 +2,13 @@ import { BookOpen, ClipboardList, Package, ShoppingBasket, Wheat } from 'lucide-
 import { useState } from 'react'
 import { useToast } from '../../components/toast-context'
 import { duration, money, num, round2 } from '../../lib/format'
+import { useBusinessName } from '../../lib/business-name'
 import { usePersistentState } from '../../lib/storage'
 import { useDemoClock } from '../../lib/time'
 import { useDemoMetrics } from '../metrics'
 import { DemoAppShell, type DemoScreen } from '../shell'
 import { CatalogueScreen } from './CatalogueScreen'
-import { AREAS, EMPTY_DETAILS, MIN_DELIVERY_ORDER, createInitialState } from './data'
+import { AREAS, BUSINESS, EMPTY_DETAILS, MIN_DELIVERY_ORDER, createInitialState } from './data'
 import { nextStatus, statusMessage } from './message'
 import { OrderScreen, type Stage } from './OrderScreen'
 import { OrdersScreen, ProductsScreen } from './ShopScreens'
@@ -19,6 +20,9 @@ const ACCENT = { base: '#7e22ce', strong: '#6b21a8', soft: '#faf5ff', ink: '#581
 type ScreenId = 'catalogue' | 'order' | 'orders' | 'products'
 
 export default function WhatsAppOrderingDemo() {
+  const name = useBusinessName()
+  const business = name ?? BUSINESS
+  const personalised = name !== null
   const clock = useDemoClock(10, 40)
   const toast = useToast()
   const [state, setState] = usePersistentState<OrderingState>(`${SLUG}.state`, createInitialState, { version: 1, freshDaily: true })
@@ -116,7 +120,7 @@ export default function WhatsAppOrderingDemo() {
     if (!order) return
     const status = nextStatus(order)
     if (!status) return
-    const text = statusMessage(order, status)
+    const text = statusMessage(order, status, business)
     setState((s) => ({
       ...s,
       orders: s.orders.map((o) => (o.id === orderId ? { ...o, status, updates: [...o.updates, { at: clock(), text }] } : o)),
@@ -161,7 +165,7 @@ export default function WhatsAppOrderingDemo() {
   return (
     <DemoAppShell
       slug={SLUG}
-      business={{ name: 'Jacaranda & Rye Bakehouse', descriptor: 'Bakery and café · Avondale, Harare', icon: Wheat }}
+      business={{ name: business, descriptor: personalised ? 'Your business, sample data' : 'Bakery and café · Avondale, Harare', icon: Wheat }}
       accent={ACCENT}
       screens={screens}
       active={screen}
