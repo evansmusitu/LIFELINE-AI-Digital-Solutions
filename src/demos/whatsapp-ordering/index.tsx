@@ -120,7 +120,8 @@ export default function WhatsAppOrderingDemo() {
     if (!order) return
     const status = nextStatus(order)
     if (!status) return
-    const text = statusMessage(order, status, business)
+    // Saved with the sample name: the visitor's own name is put in when the update is shown (personalised()), so it never reaches localStorage.
+    const text = statusMessage(order, status)
     setState((s) => ({
       ...s,
       orders: s.orders.map((o) => (o.id === orderId ? { ...o, status, updates: [...o.updates, { at: clock(), text }] } : o)),

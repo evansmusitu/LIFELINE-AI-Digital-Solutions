@@ -58,6 +58,25 @@ export function getBusinessName(): string | null {
   return current
 }
 
+/**
+ * Run once at startup, after the arrival has been counted. Reads ?for= and then takes it out of the
+ * address (keeping the rest of it), so the name isn't in the page address any more. Otherwise chat and
+ * call requests would send it to the Worker in their Referer header. The name stays in this tab's
+ * sessionStorage, so reloads and other pages in the tab still show it.
+ */
+export function captureBusinessName(): void {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  if (!url.searchParams.has('for')) return
+  getBusinessName()
+  url.searchParams.delete('for')
+  try {
+    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
+  } catch {
+    // The address can't be changed here: the name stays in it for this page load.
+  }
+}
+
 /** The visitor's business name from a personalised link, or the fallback (the sample name). The name is fixed for the tab's page load. */
 export function useBusinessName(): string | null
 export function useBusinessName(fallback: string): string

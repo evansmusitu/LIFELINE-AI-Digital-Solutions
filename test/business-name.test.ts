@@ -59,3 +59,70 @@ describe('parseBusinessName', () => {
     expect(parseBusinessName('Mama{{x}}')).toBeNull()
   })
 })
+
+describe('captureBusinessName', () => {
+  /** A minimal page: an address, a history, and a tab's sessionStorage. */
+  async function inPage(href: string) {
+    const store = new Map<string, string>()
+    const replaced: string[] = []
+    const win = {
+      location: new URL(href),
+      history: { state: { scrollY: 5 }, replaceState: (_s: unknown, _t: string, url: string) => void replaced.push(url) },
+      sessionStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) },
+    }
+    const saved = globalThis.window
+    Object.assign(globalThis, { window: win })
+    const { vi } = await import('vitest')
+    vi.resetModules()
+    const mod = await import('../src/lib/business-name')
+    return { mod, store, replaced, restore: () => Object.assign(globalThis, { window: saved }) }
+  }
+
+  it('keeps the name in the tab and takes it out of the address, keeping everything else', async () => {
+    const page = await inPage('https://lifeline.example/demos/whatsapp-ordering?ref=walk-in&for=Mama%27s+Kitchen#top')
+    try {
+      page.mod.captureBusinessName()
+      expect(page.replaced).toEqual(['/demos/whatsapp-ordering?ref=walk-in#top'])
+      expect(page.store.get('lifeline.for')).toBe("Mama's Kitchen")
+      expect(page.mod.getBusinessName()).toBe("Mama's Kitchen")
+    } finally {
+      page.restore()
+    }
+  })
+
+  it('leaves an address without ?for= alone', async () => {
+    const page = await inPage('https://lifeline.example/demos/whatsapp-ordering?ref=status')
+    try {
+      page.mod.captureBusinessName()
+      expect(page.replaced).toEqual([])
+    } finally {
+      page.restore()
+    }
+  })
+
+  it('also removes a name that is not accepted, so it is never sent anywhere', async () => {
+    const page = await inPage('https://lifeline.example/?for=%3Cscript%3E')
+    try {
+      page.mod.captureBusinessName()
+      expect(page.replaced).toEqual(['/'])
+      expect(page.mod.getBusinessName()).toBeNull()
+    } finally {
+      page.restore()
+    }
+  })
+})
+
+describe('saved order updates', () => {
+  const order = { customer: 'Tendai M', ref: 'JR-2418', total: 12.5, time: 'Today 5pm', method: 'collection', area: 'Avondale' } as never
+
+  it('are saved with the sample name, and show the visitor’s name only when displayed', async () => {
+    const { BUSINESS } = await import('../src/demos/whatsapp-ordering/data')
+    const { personalised, statusMessage } = await import('../src/demos/whatsapp-ordering/message')
+    const saved = statusMessage(order, 'Confirmed')
+    expect(saved).toContain(BUSINESS)
+    expect(saved).not.toContain("Mama's Kitchen")
+    expect(personalised(saved, "Mama's Kitchen")).toContain("thanks for ordering from Mama's Kitchen")
+    expect(personalised(saved, "Mama's Kitchen")).not.toContain(BUSINESS)
+    expect(personalised(saved, BUSINESS)).toBe(saved)
+  })
+})

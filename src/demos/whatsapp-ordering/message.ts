@@ -28,6 +28,11 @@ export function demoOrderEnquiry(order: Order): string {
   ].join('\n')
 }
 
+/** A saved status update as shown to a visitor on a personalised link: the sample business name becomes theirs. */
+export function personalised(text: string, business: string): string {
+  return business === BUSINESS ? text : text.replaceAll(BUSINESS, business)
+}
+
 export function statusMessage(order: Order, status: OrderStatus, business: string = BUSINESS): string {
   const first = order.customer.split(' ')[0]
   switch (status) {
