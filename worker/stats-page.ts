@@ -41,6 +41,15 @@ export const EVENT_LABELS: Record<CountEvent, string> = {
   share_whatsapp: 'Demos shared to WhatsApp',
   share_sheet: 'Demos shared from the phone’s share menu',
   share_copy: 'Demo links copied',
+  ref_walk_in: 'Arrived from a link tagged walk-in',
+  ref_status: 'Arrived from a link tagged status',
+  ref_tiktok: 'Arrived from a link tagged tiktok',
+  ref_facebook: 'Arrived from a link tagged facebook',
+  ref_instagram: 'Arrived from a link tagged instagram',
+  ref_referral: 'Arrived from a link tagged referral',
+  ref_flyer: 'Arrived from a link tagged flyer',
+  ref_other: 'Arrived from a link with any other tag',
+  link_personalised: 'Personalised links opened',
 }
 
 const COLUMNS: { label: string; events: CountEvent[] }[] = [
@@ -56,6 +65,11 @@ const COLUMNS: { label: string; events: CountEvent[] }[] = [
   { label: 'WhatsApp from video calls', events: ['whatsapp_video'] },
   { label: 'WhatsApp from pages', events: ['whatsapp_page'] },
   { label: 'Demo shares', events: ['share_whatsapp', 'share_sheet', 'share_copy'] },
+  {
+    label: 'Arrived from a tagged link',
+    events: ['ref_walk_in', 'ref_status', 'ref_tiktok', 'ref_facebook', 'ref_instagram', 'ref_referral', 'ref_flyer', 'ref_other'],
+  },
+  { label: 'Personalised links opened', events: ['link_personalised'] },
 ]
 
 function escapeHtml(text: string): string {

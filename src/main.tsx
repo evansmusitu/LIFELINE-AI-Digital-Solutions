@@ -4,11 +4,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
-import { startCounting } from './lib/counts'
+import { countArrival, startCounting } from './lib/counts'
 import { startRouter } from './lib/router'
 
 startRouter()
 startCounting()
+countArrival()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
