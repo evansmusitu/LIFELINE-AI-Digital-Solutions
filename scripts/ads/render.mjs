@@ -3,16 +3,17 @@
  * Renders the four TikTok ad videos and their covers.
  *   node scripts/ads/render.mjs            all videos
  *   node scripts/ads/render.mjs tari-chat  one or more, by id
+ *   node scripts/ads/render.mjs --lang=sn  Shona captions-only versions (en, sn or all; default en)
  * Needs a built dist/ (npm run build). Reads the local build through route interception and records
  * it with Playwright, so nothing is sent to the live site. The Tari chat reply is a scripted stand-in.
  * Output goes to OUT (default /projects/sandbox/.kiro/artifacts/tiktok). See README.md for the toolchain.
  */
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { VIDEOS, WHATSAPP } from './scenarios.mjs'
+import { COPY, VIDEOS, WHATSAPP } from './scenarios.mjs'
 
 const HERE = dirname(new URL(import.meta.url).pathname)
 const REPO = resolve(HERE, '../..')
@@ -28,6 +29,10 @@ const { chromium } = await import(pathToFileURL(join(TOOLS, 'pw/node_modules/pla
 
 mkdirSync(OUT, { recursive: true })
 mkdirSync(WORK, { recursive: true })
+
+const langArg = process.argv.find((a) => a.startsWith('--lang='))?.slice(7) ?? 'en'
+if (!['en', 'sn', 'all'].includes(langArg)) throw new Error('--lang must be en, sn or all')
+const LANGS = langArg === 'all' ? ['en', 'sn'] : [langArg]
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 function run(cmd, args, opts = {}) {
@@ -60,6 +65,13 @@ function speak(text) {
   const info = { file, seconds: wavSeconds(file) }
   voiceCache.set(text, info)
   return info
+}
+
+const END_SAY = 'Try it free. Link in bio.'
+/** Generates all speech for a video up front, so Piper never runs while the recording clock is running. */
+function pregenerate(v) {
+  for (const line of Object.values(v.lines)) if (line.say) speak(line.say)
+  speak(END_SAY)
 }
 
 /* ---------- Overlay images (captions, end card, cover) ---------- */
@@ -128,29 +140,39 @@ function captionHtml(cue, tag) {
   return `<div class="cap ${cue.kind === 'hook' ? 'hook' : ''}" style="top:${top}px">${rich(cue.cap)}</div>${tagHtml(tag)}`
 }
 
-function endCardHtml() {
+function endCardHtml(c) {
   return `<div class="card"></div>
   <div style="position:absolute;left:56px;right:130px;top:330px;text-align:center">
     <img class="logo" style="margin:0 auto" src="/logo.png" alt="">
     <div class="brand" style="margin-top:34px">LIFELINE</div><div class="sub">AI CONCIERGE</div>
-    <div class="big" style="margin-top:90px">Try it <span class="txt">free</span></div>
-    <div class="big" style="font-size:96px;margin-top:20px">Link in bio</div>
+    <div class="big" style="margin-top:90px">${rich(c.endTitle).replace(/<b>/g, '<span class="txt">').replace(/<\/b>/g, '</span>')}</div>
+    <div class="big" style="font-size:96px;margin-top:20px">${esc(c.endLink)}</div>
     <div style="margin-top:80px"><span class="wa">${WA_SVG}WhatsApp ${WHATSAPP}</span></div>
-    <div style="margin-top:56px;font:500 28px/1.4 'Inter';color:#B9C5E0">Demos use invented sample businesses</div>
+    <div style="margin-top:56px;font:500 28px/1.4 'Inter';color:#B9C5E0">${esc(c.endNote)}</div>
   </div>`
 }
 
-function coverHtml(v, frameUrl) {
+function coverHtml(v, c, frameUrl) {
   return `<div class="card"></div>
   <div style="position:absolute;left:70px;right:130px;top:190px">
     <div style="display:flex;align-items:center;gap:20px"><img class="logo" style="width:84px;height:84px" src="/logo.png" alt="">
       <div><div class="brand" style="font-size:30px">LIFELINE</div><div class="sub" style="font-size:18px;margin-top:8px">AI CONCIERGE</div></div></div>
-    <div class="big" style="font-size:96px;margin-top:52px">${rich(v.cover.headline).replace(/<b>/g, '<span class="txt">').replace(/<\/b>/g, '</span>')}</div>
+    <div class="big" style="font-size:96px;margin-top:52px">${rich(c.headline).replace(/<b>/g, '<span class="txt">').replace(/<\/b>/g, '</span>')}</div>
     <div style="margin-top:46px;width:880px;height:760px;border-radius:36px;overflow:hidden;border:3px solid rgba(0,212,255,.5);
       box-shadow:0 0 70px rgba(0,212,255,.25),0 26px 70px rgba(0,0,0,.55);background:#0A1230 url(${frameUrl}) center ${v.cover.focus ?? 38}%/cover"></div>
-    <div style="margin-top:34px;font:700 38px/1.2 'Inter'" class="txt">Try it free, link in bio</div>
+    <div style="margin-top:34px;font:700 38px/1.2 'Inter'" class="txt">${esc(c.coverCta)}</div>
   </div>
-  <div class="tag" style="top:1540px">${esc(v.tag)}</div>`
+  <div class="tag" style="top:1540px">${esc(c.tag)}</div>`
+}
+
+/** The video with its captions replaced by the translation. Spoken lines stay as pacing only. */
+function localise(v, lang) {
+  const t = COPY[lang][v.id]
+  const lines = Object.fromEntries(Object.entries(v.lines).map(([k, l]) => {
+    if (!t.caps[k]) throw new Error(`Missing ${lang} caption for ${v.id}/${k}`)
+    return [k, { ...l, cap: t.caps[k] }]
+  }))
+  return { ...v, lines }
 }
 
 /* ---------- Page recording ---------- */
@@ -172,17 +194,28 @@ const PAGE_INIT = () => {
     background:rgba(0,212,255,.35);border:3px solid #fff;box-shadow:0 0 16px rgba(0,212,255,.9);pointer-events:none;display:none}
     .__rip{position:fixed;z-index:2147483646;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;border:4px solid #00D4FF;
     pointer-events:none;animation:__r .5s ease-out forwards}@keyframes __r{to{transform:scale(3.2);opacity:0}}`
+  // Currency amounts (for example $2.80, US$ 22, USD 15, ZiG 40) never appear in the videos.
+  const MONEY = /(?:US\s?\$|\$|\bUSD|\bZiG|\bZWL)\s?\d[\d,]*(?:\.\d+)?|\b\d[\d,]*(?:\.\d+)?\s?(?:USD|ZiG|ZWL)\b/gi
   const scrub = () => {
     const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
-    for (let n = w.nextNode(); n; n = w.nextNode()) {
-      const clean = n.data.replace(CITY, '')
+    const nodes = []
+    for (let n = w.nextNode(); n; n = w.nextNode()) nodes.push(n)
+    nodes.forEach((n, i) => {
+      // A "$" and its number can sit in separate text nodes (JSX text then an expression).
+      const next = nodes[i + 1]
+      if (next && /\$\s*$/.test(n.data) && /^\s*\d/.test(next.data)) {
+        n.data = n.data.replace(/(?:US\s?)?\$\s*$/i, '')
+        next.data = next.data.replace(/^\s*\d[\d,]*(?:\.\d+)?/, '')
+      }
+      const clean = n.data.replace(CITY, '').replace(MONEY, '')
       if (clean !== n.data) n.data = clean
-    }
+    })
     for (const b of document.querySelectorAll('button')) if (/how much does it cost/i.test(b.textContent)) b.style.display = 'none'
     for (const bar of document.querySelectorAll('div.fixed.inset-x-0.bottom-0')) {
       if (!bar.closest('[role=dialog]') && !bar.querySelector('[role=dialog]')) bar.style.display = 'none'
     }
   }
+  window.__scrub = scrub
   // A navy cover hides each page while it loads. The recorder removes it with reveal().
   const cover = () => {
     if (!window.__revealed && document.body && !document.getElementById('__cover')) {
@@ -192,6 +225,8 @@ const PAGE_INIT = () => {
     }
   }
   new MutationObserver(cover).observe(document, { childList: true, subtree: true })
+  // Text is cleaned in the same task as the change, before the browser paints it.
+  const scrubObserver = new MutationObserver(() => document.body && scrub())
   addEventListener('DOMContentLoaded', () => {
     cover()
     document.head.append(css)
@@ -210,6 +245,8 @@ const PAGE_INIT = () => {
       document.body.append(r)
       setTimeout(() => r.remove(), 600)
     }, true)
+    scrubObserver.observe(document.body, { childList: true, subtree: true, characterData: true })
+    scrub()
     setInterval(scrub, 120)
   })
 }
@@ -224,6 +261,7 @@ class Rec {
     this.cues = []
     this.says = []
     this.sayEnd = 0
+    this.voice = true
   }
   /** Seconds on the video's clock (after the trimmed loading part). */
   now() {
@@ -247,8 +285,9 @@ class Rec {
     if (prev && prev.end == null) prev.end = t
     this.cues.push({ ...line, start: t, end: null })
     if (line.say) {
-      const s = speak(line.say)
-      this.says.push({ file: s.file, start: t + 0.1 })
+      const s = speak(line.say) // already generated by pregenerate()
+      // Captions-only versions (no voice) keep the same pacing as the English voice-over.
+      if (this.voice) this.says.push({ file: s.file, start: t + 0.1 })
       this.sayEnd = Math.max(this.sayEnd, t + 0.1 + s.seconds)
     }
   }
@@ -268,6 +307,7 @@ class Rec {
   /** Removes the loading cover. */
   async reveal() {
     await this.page.evaluate(() => {
+      window.__scrub?.()
       window.__revealed = true
       document.getElementById('__cover')?.remove()
     })
@@ -304,14 +344,15 @@ class Rec {
     if (prev && prev.end == null) prev.end = t
     if (t > this.now()) await wait((t - this.now()) * 1000)
     this.endAt = t
-    const s = speak('Try it free. Link in bio.')
-    this.says.push({ file: s.file, start: t + 0.25 })
+    const s = speak(END_SAY)
+    if (this.voice) this.says.push({ file: s.file, start: t + 0.25 })
     this.total = t + Math.max(3.1, s.seconds + 0.8)
     await wait(Math.max(600, (this.total - this.now()) * 1000))
   }
 }
 
-async function recordVideo(browser, v) {
+async function recordVideo(browser, v, lang) {
+  pregenerate(v)
   const dir = join(WORK, 'rec-' + v.id)
   rmSync(dir, { recursive: true, force: true })
   const ctx = await browser.newContext({
@@ -324,7 +365,8 @@ async function recordVideo(browser, v) {
   await ctx.addInitScript(PAGE_INIT)
   await ctx.route('https://studio.test/**', (route) => MIME_ROUTE(route, v))
   const page = await ctx.newPage()
-  const r = new Rec(page, v)
+  const r = new Rec(page, lang === 'en' ? v : localise(v, lang))
+  r.voice = lang === 'en'
   try {
     await v.run(r, page)
   } catch (e) {
@@ -340,19 +382,20 @@ async function recordVideo(browser, v) {
 
 /* ---------- Compose ---------- */
 
-async function compose(v, r, webm, stage) {
-  const parts = join(WORK, 'parts-' + v.id)
+async function compose(v, r, webm, stage, lang) {
+  const copy = COPY[lang][v.id]
+  const parts = join(WORK, `parts-${v.id}-${lang}`)
   rmSync(parts, { recursive: true, force: true })
   mkdirSync(parts, { recursive: true })
 
   const overlays = []
   for (const [i, c] of r.cues.entries()) {
     const f = join(parts, `cap${i}.png`)
-    await shotHtml(stage, captionHtml(c, v.tag), f, { omitBackground: true })
+    await shotHtml(stage, captionHtml(c, copy.tag), f, { omitBackground: true })
     overlays.push({ file: f, start: c.start, end: c.end })
   }
   const endPng = join(parts, 'end.png')
-  await shotHtml(stage, endCardHtml(), endPng)
+  await shotHtml(stage, endCardHtml(COPY[lang]._end), endPng)
   overlays.push({ file: endPng, start: r.endAt, end: r.total + 1 })
 
   const music = join(parts, 'music.wav')
@@ -361,6 +404,7 @@ async function compose(v, r, webm, stage) {
   const args = ['-y', '-v', 'error', '-i', webm]
   for (const o of overlays) args.push('-loop', '1', '-framerate', '30', '-t', r.total.toFixed(2), '-i', o.file)
   const nImg = overlays.length
+  const voiced = r.says.length > 0
   for (const s of r.says) args.push('-i', s.file)
   args.push('-i', music)
 
@@ -375,11 +419,17 @@ async function compose(v, r, webm, stage) {
     f += `[${voiceIdx[i]}:a]aresample=44100,adelay=${ms}|${ms}[v${i}];`
   })
   const musicIdx = nImg + 1 + r.says.length
-  f += `${r.says.map((_, i) => `[v${i}]`).join('')}amix=inputs=${r.says.length}:normalize=0:duration=longest[voice];`
-  f += `[${musicIdx}:a]aresample=44100,volume=0.2,afade=t=out:st=${(r.total - 1.2).toFixed(2)}:d=1.2[mus];`
-  f += `[voice][mus]amix=inputs=2:normalize=0:duration=longest,alimiter=limit=0.95[aout]`
+  const fade = `afade=t=out:st=${(r.total - 1.2).toFixed(2)}:d=1.2`
+  if (voiced) {
+    f += `${r.says.map((_, i) => `[v${i}]`).join('')}amix=inputs=${r.says.length}:normalize=0:duration=longest[voice];`
+    f += `[${musicIdx}:a]aresample=44100,volume=0.2,${fade}[mus];`
+    f += `[voice][mus]amix=inputs=2:normalize=0:duration=longest,alimiter=limit=0.95[aout]`
+  } else {
+    // Captions only: the music carries the audio, so it sits louder than under a voice.
+    f += `[${musicIdx}:a]aresample=44100,volume=0.5,${fade},alimiter=limit=0.95[aout]`
+  }
 
-  const outFile = join(OUT, `${v.file}.mp4`)
+  const outFile = join(OUT, `${v.file}${lang === 'en' ? '' : '-' + lang}.mp4`)
   args.push(
     '-filter_complex', f, '-map', '[vout]', '-map', '[aout]', '-t', r.total.toFixed(2),
     '-c:v', 'libx264', '-crf', '20', '-preset', 'medium', '-r', '30', '-pix_fmt', 'yuv420p',
@@ -393,14 +443,14 @@ async function compose(v, r, webm, stage) {
   run(FFMPEG, ['-y', '-v', 'error', '-ss', coverAt.toFixed(2), '-i', webm, '-frames:v', '1', '-vf', 'scale=1080:1920:flags=lanczos', framePng])
   const frameUrl = `https://ads.test/frame.png`
   const cover = await openStage(stage.context().browser(), { '/frame.png': framePng })
-  await shotHtml(cover, coverHtml(v, frameUrl), join(OUT, `${v.file}-cover.jpg`), { type: 'jpeg', quality: 90 })
+  await shotHtml(cover, coverHtml(v, { ...copy, ...COPY[lang]._end }, frameUrl), join(OUT, `${v.file}${lang === 'en' ? '' : '-' + lang}-cover.jpg`), { type: 'jpeg', quality: 90 })
   await cover.close()
   return outFile
 }
 
 /* ---------- Main ---------- */
 
-const wanted = process.argv.slice(2)
+const wanted = process.argv.slice(2).filter((a) => !a.startsWith('--'))
 const list = VIDEOS.filter((v) => wanted.length === 0 || wanted.includes(v.id))
 if (!list.length) throw new Error('No such video. Choose from: ' + VIDEOS.map((v) => v.id).join(', '))
 if (!existsSync(join(DIST, 'index.html'))) throw new Error('dist/ is missing. Run npm run build first.')
@@ -408,9 +458,11 @@ if (!existsSync(join(DIST, 'index.html'))) throw new Error('dist/ is missing. Ru
 const browser = await chromium.launch()
 const stage = await openStage(browser)
 for (const v of list) {
-  console.log(`Recording ${v.id}...`)
-  const { r, webm } = await recordVideo(browser, v)
-  const file = await compose(v, r, webm, stage)
-  console.log(`  ${file} (${r.total.toFixed(1)} s, ${(statSync(file).size / 1e6).toFixed(1)} MB)`)
+  for (const lang of LANGS) {
+    console.log(`Recording ${v.id} (${lang})...`)
+    const { r, webm } = await recordVideo(browser, v, lang)
+    const file = await compose(v, r, webm, stage, lang)
+    console.log(`  ${file} (${r.total.toFixed(1)} s, ${(statSync(file).size / 1e6).toFixed(1)} MB)`)
+  }
 }
 await browser.close()
