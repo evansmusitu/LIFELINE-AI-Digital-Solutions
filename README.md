@@ -276,6 +276,10 @@ The outreach kit is in `docs/outreach/`: message templates, a walk-in script, an
 tracker (`prospect-tracker.csv`) and a weekly review checklist. It is plain text outside `public/`, so it is not
 published with the site. The prices in it are numbers to test, not market facts.
 
+## Walk-in flyer
+
+`scripts/flyer/generate.mjs` makes a printable A5 flyer (and an A4 sheet with two) with a QR code to the WhatsApp ordering demo, one per `?by=` person plus a generic one, in English and a Shona draft. It decodes every QR back to its exact link. See `scripts/flyer/README.md`.
+
 ## Where things live
 
 | What | Where |
