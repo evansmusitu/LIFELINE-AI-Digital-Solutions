@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /*
- * Outreach link builder. Reads a CSV (business name, demo slug, ref tag) and prints, for each row,
+ * Outreach link builder. Reads a CSV (business name, demo slug, ref tag, and optionally
+ * who is handing out the link, by) and prints, for each row,
  * a personalised demo link and a short WhatsApp-ready message.
  *
  *   node scripts/outreach/links.mjs scripts/outreach/prospects.example.csv
@@ -77,18 +78,20 @@ export function encodeValue(value) {
   return encodeURIComponent(value).replace(/'/g, '%27').replace(/[!()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
 }
 
-/** The site address, demo slugs and ref tags, read from the source files. */
+/** The site address, demo slugs, ref tags and by tags, read from the source files. */
 export function loadConfig() {
   const url = /url:\s*'(https?:\/\/[^']+)'/.exec(read('src/config/site.ts'))?.[1]
   const slugs = [...read('src/demos/registry.ts').matchAll(/^\s*slug:\s*'([^']+)'/gm)].map((m) => m[1])
   const tagList = /REF_TAGS\s*=\s*\[([^\]]*)\]/.exec(read('src/lib/count-events.ts'))?.[1] ?? ''
   const refTags = [...tagList.matchAll(/'([^']+)'/g)].map((m) => m[1])
-  if (!url || slugs.length === 0 || refTags.length === 0) throw new Error('Could not read the site address, demo slugs or ref tags from the source files.')
-  return { baseUrl: url.replace(/\/+$/, ''), slugs, refTags }
+  const byList = /BY_TAGS\s*=\s*\[([^\]]*)\]/.exec(read('src/lib/count-events.ts'))?.[1] ?? ''
+  const byTags = [...byList.matchAll(/'([^']+)'/g)].map((m) => m[1])
+  if (!url || slugs.length === 0 || refTags.length === 0 || byTags.length === 0) throw new Error('Could not read the site address, demo slugs ref tags or by tags from the source files.')
+  return { baseUrl: url.replace(/\/+$/, ''), slugs, refTags, byTags }
 }
 
 /** Build the link and message for one row. Returns { link, message, warnings, errors }. */
-export function buildRow([name = '', slug = '', ref = ''], config) {
+export function buildRow([name = '', slug = '', ref = '', by = ''], config) {
   const warnings = []
   const errors = []
   const problem = nameProblem(name)
@@ -97,8 +100,11 @@ export function buildRow([name = '', slug = '', ref = ''], config) {
   if (!config.slugs.includes(slug)) errors.push(`unknown demo "${slug}" (use one of: ${config.slugs.join(', ')})`)
   const tag = ref.toLowerCase()
   if (!config.refTags.includes(tag)) errors.push(`unknown ref tag "${ref}" (use one of: ${config.refTags.join(', ')})`)
+  const who = by.toLowerCase()
+  // The by column may be left empty (no person tag). A value that is there must be on the list.
+  if (who && !config.byTags.includes(who)) errors.push(`unknown by tag "${by}" (use one of: ${config.byTags.join(', ')}, or leave it empty)`)
   if (errors.length) return { link: null, message: null, warnings, errors }
-  const link = `${config.baseUrl}/demos/${slug}?for=${encodeValue(usable)}&ref=${tag}`
+  const link = `${config.baseUrl}/demos/${slug}?for=${encodeValue(usable)}&ref=${tag}${who ? `&by=${who}` : ''}`
   const what = slug === 'whatsapp-ordering' ? 'your menu' : 'your business'
   const message =
     `Hi ${usable}, this is Evans from LIFELINE. I made a sample of how ${what} could work on WhatsApp, ` +

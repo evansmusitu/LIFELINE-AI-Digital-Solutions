@@ -1,6 +1,6 @@
 import { SITE } from '../config/site'
 import { parseBusinessName } from './business-name'
-import { EVENT_PATH, refEvent, type PageEvent } from './count-events'
+import { byEvent, EVENT_PATH, refEvent, type PageEvent } from './count-events'
 
 /*
  * Counts WhatsApp taps and demo shares as daily totals (src/lib/count-events.ts). Each count sends
@@ -65,7 +65,7 @@ let arrivalDone = false
 
 /**
  * Counts how a visit arrived, once per tab session: the kind of link (?ref=, from a fixed list, never the
- * text itself) and whether it was a personalised link (?for=, the name is never sent). A flag in
+ * text itself), who handed it out (?by=, the same way) and whether it was a personalised link (?for=, the name is never sent). A flag in
  * sessionStorage stops a reload or a second page in the same tab counting again; a new tab counts again.
  */
 export function countArrival(search: string = window.location.search): void {
@@ -75,6 +75,8 @@ export function countArrival(search: string = window.location.search): void {
   const events: PageEvent[] = []
   const ref = refEvent(params.get('ref'))
   if (ref) events.push(ref)
+  const by = byEvent(params.get('by'))
+  if (by) events.push(by)
   if (parseBusinessName(params.get('for'))) events.push('link_personalised')
   if (!events.length) return
   try {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { REF_TAGS } from '../src/lib/count-events'
+import { BY_TAGS, REF_TAGS } from '../src/lib/count-events'
 import { parseBusinessName } from '../src/lib/business-name'
 import { SITE } from '../src/config/site'
 import { DEMOS } from '../src/demos/registry'
@@ -13,6 +13,7 @@ describe('outreach link builder', () => {
     expect(config.baseUrl).toBe(SITE.url)
     expect(config.slugs).toEqual(DEMOS.map((d) => d.slug))
     expect(config.refTags).toEqual([...REF_TAGS])
+    expect(config.byTags).toEqual([...BY_TAGS])
   })
 
   it('applies the same name rules as the site', () => {
@@ -54,6 +55,17 @@ describe('outreach link builder', () => {
     expect(buildRow(['A', 'nope', 'walk-in'], config).errors[0]).toMatch(/unknown demo/)
     expect(buildRow(['A', 'whatsapp-ordering', 'garbage'], config).errors[0]).toMatch(/unknown ref tag/)
     expect(buildRow(['<b>', 'whatsapp-ordering', 'walk-in'], config).link).toBeNull()
+  })
+
+  it('adds a validated by tag, and allows it to be empty', () => {
+    const r = buildRow(["Mama's Kitchen", 'whatsapp-ordering', 'walk-in', 'Team-B'], config)
+    expect(r.errors).toEqual([])
+    expect(r.link).toBe(`${SITE.url}/demos/whatsapp-ordering?for=Mama%27s%20Kitchen&ref=walk-in&by=team-b`)
+    expect(buildRow(['A', 'whatsapp-ordering', 'walk-in', ''], config).link).not.toContain('by=')
+    expect(buildRow(['A', 'whatsapp-ordering', 'walk-in'], config).link).not.toContain('by=')
+    const bad = buildRow(['A', 'whatsapp-ordering', 'walk-in', 'team-z'], config)
+    expect(bad.link).toBeNull()
+    expect(bad.errors[0]).toMatch(/unknown by tag/)
   })
 
   it('warns when a name is tidied', () => {
