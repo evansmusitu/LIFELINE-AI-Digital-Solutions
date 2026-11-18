@@ -5,7 +5,7 @@ import { SITE } from '../src/config/site'
 import { linkEvent } from '../src/lib/counts'
 import worker from '../worker/index'
 import type { ChatLimiter } from '../worker/limiter'
-import { counter, handleEvent, KEEP_DAYS, SiteStats, type DayTotals } from '../worker/stats'
+import { counter, EVENT_LIMITS, handleEvent, KEEP_DAYS, SiteStats, type DayTotals } from '../worker/stats'
 import { handleStats, lastDays, normalPasscode, passcodeMatches, statsReport, TABLE_DAYS } from '../worker/stats-page'
 import type { VideoUsage } from '../worker/video-calls'
 
@@ -114,6 +114,31 @@ test('count endpoint', async () => {
   check('event: limiter down 503, not counted', res.status === 503 && counted.length === 0, res.status)
 })
 
+test('count endpoint: person tags', async () => {
+  const counted: string[] = []
+  const count = (event: string) => void counted.push(event)
+  for (const event of ['by_team_a', 'by_team_b', 'by_team_c', 'by_other']) {
+    const res = await handleEvent(postEvent({ event }), limiter(), count)
+    check(`event: ${event} accepted`, res.status === 204, res.status)
+  }
+  check('event: person tags counted', counted.join() === 'by_team_a,by_team_b,by_team_c,by_other', counted)
+  counted.length = 0
+  for (const event of ['by_team_d', 'by_Evans', 'by_', 'by_team-a']) {
+    const res = await handleEvent(postEvent({ event }), limiter(), count)
+    check(`event: ${event} refused, never stored raw`, res.status === 400, res.status)
+  }
+  check('event: nothing counted for unknown people', counted.length === 0, counted)
+})
+
+test('count endpoint: limits suit a visit of three events', async () => {
+  // Three events per visit: 3 visits fit in a minute and about 33 in a day.
+  const calls: string[] = []
+  const lim = { getByName: () => ({ allow: async (m: number, d: number) => (calls.push(`${m}/${d}`), true) }) } as unknown as DurableObjectNamespace<ChatLimiter>
+  for (const event of ['ref_walk_in', 'by_team_a', 'link_personalised']) await handleEvent(postEvent({ event }), lim, () => undefined)
+  check('limits: each event passes the same per-network limit', calls.join() === '10/100,10/100,10/100', calls)
+  check('limits: three visits a minute fit', Math.floor(EVENT_LIMITS.minute / 3) >= 3 && Math.floor(EVENT_LIMITS.day / 3) >= 30)
+})
+
 test('tap counter link rules', () => {
   const number = `https://wa.me/${SITE.whatsappNumber}?text=Hi`
   check('link: WhatsApp on a page', linkEvent(number, null) === 'whatsapp_page')
@@ -197,8 +222,8 @@ test('passcode', async () => {
 
 const NOW = Date.UTC(2026, 10, 30, 12)
 const DAYS: DayTotals[] = [
-  { day: '2026-11-30', counts: { chat_started: 3, ai_reply: 9, saved_quota: 2, whatsapp_chat: 1, share_copy: 1 } },
-  { day: '2026-11-25', counts: { video_started: 2, video_refused_daily: 4, whatsapp_page: 5 } },
+  { day: '2026-11-30', counts: { chat_started: 3, ai_reply: 9, saved_quota: 2, whatsapp_chat: 1, share_copy: 1, by_team_a: 2, by_team_b: 1 } },
+  { day: '2026-11-25', counts: { video_started: 2, video_refused_daily: 4, whatsapp_page: 5, by_team_a: 1, by_other: 3, link_personalised: 2 } },
   // Outside the table, but in the all-time totals.
   { day: '2026-10-01', counts: { chat_started: 10 } },
 ]
@@ -212,11 +237,13 @@ test('stats report', () => {
   check('report: one row per day, gaps filled', dayRows.length === TABLE_DAYS, dayRows.length)
   check('report: newest day first', dayRows[0].includes('2026-11-30') && dayRows[TABLE_DAYS - 1].includes('2026-11-17'))
   const cells = (row: string) => [...row.matchAll(/<td>(\d+)<\/td>/g)].map((m) => Number(m[1]))
-  check('report: a day’s columns', cells(dayRows[0]).join() === '3,9,2,0,0,1,0,0,1,0,0', cells(dayRows[0]))
+  check('report: a day’s columns', cells(dayRows[0]).join() === '3,9,2,0,0,1,0,0,1,0,2,1,0,0,0', cells(dayRows[0]))
   check('report: an empty day is zeros', cells(dayRows[1]).every((n) => n === 0))
   const totals = html.match(/<tr class="total">.*?<\/tr>/gs) ?? []
-  check('report: 14-day total', cells(totals[0]).join() === '3,9,2,2,4,1,0,5,1,0,0', cells(totals[0]))
+  check('report: 14-day total', cells(totals[0]).join() === '3,9,2,2,4,1,0,5,1,0,3,1,0,3,2', cells(totals[0]))
   check('report: all-time total includes older days', totals[1].includes('Since 2026-10-01') && cells(totals[1])[0] === 13, totals[1])
+  check('report: per-person columns', ['Arrived from team-a', 'Arrived from team-b', 'Arrived from team-c', 'Arrived from another person tag'].every((l) => html.includes(l)))
+  check('report: per-person totals listed', html.includes('handed out by team-a</th><td>3</td><td>3</td>'))
   check('report: spending', html.includes('$1.52') && html.includes('$0.23') && html.includes('$38.25') && html.includes('$40.00'))
   check('report: calls today', html.includes('<strong>3</strong> of 20'))
   check('report: every total listed', html.includes('Calls turned away: daily call limit reached</th><td>4</td><td>4</td>'))

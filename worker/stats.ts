@@ -71,8 +71,9 @@ export function counter(stats: DurableObjectNamespace<SiteStats>, ctx: Execution
 /**
  * Taps and shares one network can send per minute and per day. Many phones on one mobile network can share an
  * address, so the day's cap is above what one visitor does. A script spread over many networks can still add to
- * these totals, so treat them as a guide. The chat and call totals are firmer: the Worker counts them itself,
- * within the chat and call limits.
+ * these totals, so treat them as a guide. A visit by a link with ?ref=, ?by= and ?for= sends 3 of these, so one
+ * person can open about 33 such links from one phone in a day (3 a minute), which suits walk-ins. The chat and
+ * call totals are firmer: the Worker counts them itself, within the chat and call limits.
  */
 export const EVENT_LIMITS = { minute: 10, day: 100 } as const
 

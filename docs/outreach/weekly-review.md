@@ -20,6 +20,7 @@ Open `prospect-tracker.csv` and the `/stats` page, then answer these.
 ## Learning
 
 - [ ] Which channel got replies (walk-in, status, Facebook, Instagram, referral)?
+- [ ] Which person tag (team-a, team-b, team-c) got replies? Compare the `who` column in the tracker with /stats.
 - [ ] What did owners ask about most?
 - [ ] Did anyone react to the price? What did they say? Is $150 + $15 too high, too low or fine?
 - [ ] Did anyone ask for payments?

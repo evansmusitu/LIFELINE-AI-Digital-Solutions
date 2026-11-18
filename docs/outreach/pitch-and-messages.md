@@ -6,6 +6,15 @@ The package: **your menu on WhatsApp with an AI receptionist.**
 
 Use `scripts/outreach/links.mjs` to make the personalised demo link for each business.
 
+## Friends who help (per-person tags)
+
+Friends who hand out demo links get 10 percent of the agreed price for each business they bring who becomes a client. This note is only the idea. Agree it with each friend in plain words before they start, and write down what you agreed. Nothing here is a contract.
+
+- Give each friend a tag: `team-a`, `team-b` or `team-c`. Put it in the `by` column of the prospects file, and `links.mjs` adds `&by=team-a` to their links.
+- `/stats` then shows how many arrivals each tag brought, next to the arrivals per channel (walk-in, status, and so on). These are totals only. The two are counted separately, so the site cannot say which friend used which channel.
+- In `prospect-tracker.csv`, fill the `who` column with the friend's tag (or leave it empty if it was you), so each reply and decision is tied to a person.
+- Link visits are a guide. The commission is on clients who sign, which you note in the tracker, not on visit counts.
+
 ## Rules for every message
 
 - Short and personal. Use the owner's or business's name. Say where you found them.

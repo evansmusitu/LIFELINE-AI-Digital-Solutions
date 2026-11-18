@@ -226,6 +226,15 @@ the phone's share menu, or by copying the link). The footer tells visitors.
   Trade-off: chats started are counted by the Worker, so tying them to a tag would mean sending the tag to the
   Worker with every message. That is skipped. WhatsApp taps are not split by tag either, as that would multiply the
   stored events by the number of tags.
+- **Person tags.** A link ending `?by=team-a` (also `team-b`, `team-c`) counts one arrival under that person in the
+  "Arrived from team-a" columns of `/stats`. Any other value counts as `other`, and the text is never sent or stored.
+  It is a second, separate count from `?ref=`: a visit with both sends both events (plus `?for=` makes three), once per
+  tab session. Daily totals only, no cookies, names or IDs. `scripts/outreach/links.mjs` reads a validated, optional
+  `by` column and adds the tag. Trade-off: a per-person-per-channel table would need an event for every pair
+  (3 people × 8 channels, plus others) or a changed request format, a bigger stats table, and more test surface. The
+  Worker could store it cheaply (the same one entry per day), but it was left out, so `/stats` shows the two totals side
+  by side and cannot say which person used which channel. Limits: a visit sends at most 3 events, so the 10 a minute
+  and 100 a day per network are unchanged: that is about 33 full visits a day from one phone.
 - **Reading them.** Open `/stats` on the live site and enter the passcode. The page shows video call spending, the
   last 14 days and every total since counting began. Previews keep their own totals. Passcode tries, right or wrong,
   are limited to 10 a minute and 60 a day per network.
@@ -266,6 +275,10 @@ invented businesses. `test/outreach-links.test.ts` checks the script against the
 The outreach kit is in `docs/outreach/`: message templates, a walk-in script, answers to common questions, a prospect
 tracker (`prospect-tracker.csv`) and a weekly review checklist. It is plain text outside `public/`, so it is not
 published with the site. The prices in it are numbers to test, not market facts.
+
+## Walk-in flyer
+
+`scripts/flyer/generate.mjs` makes a printable A5 flyer (and an A4 sheet with two) with a QR code to the WhatsApp ordering demo, one per `?by=` person plus a generic one, in English and a Shona draft. It decodes every QR back to its exact link. See `scripts/flyer/README.md`.
 
 ## Where things live
 

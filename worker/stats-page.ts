@@ -49,6 +49,10 @@ export const EVENT_LABELS: Record<CountEvent, string> = {
   ref_referral: 'Arrived from a link tagged referral',
   ref_flyer: 'Arrived from a link tagged flyer',
   ref_other: 'Arrived from a link with any other tag',
+  by_team_a: 'Arrived from a link handed out by team-a',
+  by_team_b: 'Arrived from a link handed out by team-b',
+  by_team_c: 'Arrived from a link handed out by team-c',
+  by_other: 'Arrived from a link handed out by anyone else',
   link_personalised: 'Personalised links opened',
 }
 
@@ -69,6 +73,10 @@ const COLUMNS: { label: string; events: CountEvent[] }[] = [
     label: 'Arrived from a tagged link',
     events: ['ref_walk_in', 'ref_status', 'ref_tiktok', 'ref_facebook', 'ref_instagram', 'ref_referral', 'ref_flyer', 'ref_other'],
   },
+  { label: 'Arrived from team-a', events: ['by_team_a'] },
+  { label: 'Arrived from team-b', events: ['by_team_b'] },
+  { label: 'Arrived from team-c', events: ['by_team_c'] },
+  { label: 'Arrived from another person tag', events: ['by_other'] },
   { label: 'Personalised links opened', events: ['link_personalised'] },
 ]
 

@@ -239,3 +239,78 @@ const montage = {
 }
 
 export const VIDEOS = [whatsappOrdering, tariChat, salon, montage]
+
+/* ---------- Translations ---------- */
+
+/*
+ * COPY[lang][videoId] holds what the viewer reads: the corner tag, cover headline, cover line and one caption per line key.
+ * COPY[lang]._end is the closing card. English is built from the scenarios above.
+ *
+ * Shona (sn) is captions-only. No free, commercially usable Shona voice exists (see AUDIO-NOTES.md), so those videos carry
+ * the CC0 music bed and no voice-over. Every Shona string is a draft written without a native speaker.
+ * NATIVE REVIEW NEEDED for all of them. Plain English glosses are in POSTING-KIT.md. Mixed Shona and English words
+ * (order, delivery, sign-up, calendar) follow how people write on WhatsApp in Zimbabwe, and a reviewer may prefer pure Shona.
+ */
+const en = {
+  _end: { endTitle: 'Try it **free**', endLink: 'Link in bio', endNote: 'Demos use invented sample businesses', coverCta: 'Try it free, link in bio' },
+  ...Object.fromEntries(
+    VIDEOS.map((v) => [
+      v.id,
+      { tag: v.tag, headline: v.cover.headline, caps: Object.fromEntries(Object.entries(v.lines).map(([k, l]) => [k, l.cap])) },
+    ]),
+  ),
+}
+
+const sn = {
+  _end: { endTitle: 'Yedza **mahara**', endLink: 'Link iri mu bio', endNote: 'Mabhizimisi emuenzaniso chete', coverCta: 'Yedza mahara, link iri mu bio' },
+  'whatsapp-ordering': {
+    tag: 'Bhizimisi remuenzaniso',
+    headline: 'Maorder pa**WhatsApp**, pasina mhirizhonga',
+    caps: {
+      hook: 'Uchiri kutora **maorder** nemavoice notes?',
+      browse: 'Vatengi **vanoona** menu pafoni',
+      add: 'Vanodzvanya **kuwedzera** zvavanoda',
+      review: 'Delivery kana **kuzvitorera**',
+      preview: 'Unowana **order yakajeka**',
+      shop: 'Shopu inoiona **pakarepo**',
+    },
+  },
+  'tari-chat': {
+    tag: 'Tari ndeye AI, haisi munhu',
+    headline: 'Ona **Tari**, AI receptionist yako',
+    caps: {
+      hook: 'Receptionist anopindura pa**2am**?',
+      meet: 'Ona **Tari**, AI receptionist',
+      ask: 'Bvunza chero chii **pa-chat**',
+      reply: 'Inopindura **nekukurumidza**',
+      free: '**Mahara** kuyedza. Hapana sign-up',
+    },
+  },
+  'salon-booking': {
+    tag: 'Bhizimisi remuenzaniso',
+    headline: 'Vatengi **vabhuke online**, nguva dzose',
+    caps: {
+      hook: 'Uchiri kutora **mabhuking** nefoni?',
+      service: 'Vatengi vanosarudza **sevhisi**',
+      time: 'Zvino **nguva inovakodzera**',
+      done: 'Zvabhukwa. **Confirmation yatumirwa**',
+      details: 'Vanonyora **ruzivo rwavo**',
+      cal: 'Inowira mu**calendar** yenyu',
+    },
+  },
+  'try-the-demos': {
+    tag: 'Madhemo emabhizimisi emuenzaniso',
+    headline: '**Madhemo 15.** Yedza mahara',
+    caps: {
+      hook: '**Madhemo 15.** Yedzai mahara',
+      'restaurant-delivery': '**Restaurant delivery**',
+      'crm-pipeline': '**Pipeline** yekutengesa',
+      'clinic-pharmacy': '**Kiriniki** ne pharmacy',
+      'ai-support-desk': '**Support** yevatengi',
+      'events-ticketing': '**Zviitiko** netikiti',
+      last: 'Hapana sign-up. **Dzvanya uyedze**',
+    },
+  },
+}
+
+export const COPY = { en, sn }

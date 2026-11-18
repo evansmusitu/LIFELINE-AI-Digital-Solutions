@@ -22,6 +22,10 @@ export const PAGE_EVENTS = [
   'ref_referral',
   'ref_flyer',
   'ref_other',
+  'by_team_a',
+  'by_team_b',
+  'by_team_c',
+  'by_other',
   'link_personalised',
 ] as const
 export type PageEvent = (typeof PAGE_EVENTS)[number]
@@ -58,4 +62,15 @@ export function refEvent(raw: string | null | undefined): PageEvent | null {
   const tag = raw.trim().toLowerCase()
   const known = (REF_TAGS as readonly string[]).includes(tag)
   return (known ? `ref_${tag.replace('-', '_')}` : 'ref_other') as PageEvent
+}
+
+/** The people a link's ?by= may name. Anything else counts as "other", and the text itself is never sent or kept. */
+export const BY_TAGS = ['team-a', 'team-b', 'team-c'] as const
+
+/** The event for a raw ?by= value, the same way refEvent treats ?ref=. It is its own count, not tied to the ?ref= one. */
+export function byEvent(raw: string | null | undefined): PageEvent | null {
+  if (raw === null || raw === undefined) return null
+  const tag = raw.trim().toLowerCase()
+  const known = (BY_TAGS as readonly string[]).includes(tag)
+  return (known ? `by_${tag.replace('-', '_')}` : 'by_other') as PageEvent
 }

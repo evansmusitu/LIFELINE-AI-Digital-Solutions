@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EVENT_LABELS } from '../worker/stats-page'
-import { isPageEvent, PAGE_EVENTS, refEvent, WORKER_EVENTS } from '../src/lib/count-events'
+import { byEvent, BY_TAGS, isPageEvent, PAGE_EVENTS, refEvent, WORKER_EVENTS } from '../src/lib/count-events'
 
 describe('refEvent', () => {
   it('maps each listed tag to its own event', () => {
@@ -89,9 +89,43 @@ describe('countArrival', () => {
     expect(sent.join()).not.toContain('Mama')
   })
 
+  it('counts ?by= as its own event, once per tab session, alongside ?ref=', async () => {
+    await arrive('?ref=walk-in&by=team-b')
+    await arrive('?ref=walk-in&by=team-b')
+    expect(sent.sort()).toEqual(['{"event":"by_team_b"}', '{"event":"ref_walk_in"}'])
+    store.clear()
+    sent.length = 0
+    await arrive('?by=team-c&for=Mama')
+    expect(sent.sort()).toEqual(['{"event":"by_team_c"}', '{"event":"link_personalised"}'])
+  })
+
+  it('never sends an unknown ?by= value', async () => {
+    await arrive('?by=Evans%20M')
+    expect(sent).toEqual(['{"event":"by_other"}'])
+    expect(sent.join()).not.toContain('Evans')
+  })
+
   it('counts nothing without ?ref= or a valid ?for=', async () => {
     await arrive('')
     await arrive('?for=%3Cimg%3E')
     expect(sent).toEqual([])
+  })
+})
+
+describe('byEvent', () => {
+  it('maps each listed person to its own event, ignoring case and spaces', () => {
+    for (const tag of BY_TAGS) expect(byEvent(` ${tag.toUpperCase()} `)).toBe(`by_${tag.replace('-', '_')}`)
+    expect(byEvent('team-a')).toBe('by_team_a')
+  })
+
+  it('counts any other text as other, and no value as nothing', () => {
+    for (const raw of ['team-d', 'team_a', '', '<script>', '__proto__']) expect(byEvent(raw)).toBe('by_other')
+    expect(byEvent(null)).toBeNull()
+    expect(byEvent(undefined)).toBeNull()
+  })
+
+  it('only gives events the Worker accepts', () => {
+    for (const raw of ['team-a', 'x', '__proto__']) expect(isPageEvent(byEvent(raw))).toBe(true)
+    expect(isPageEvent('by_team-a')).toBe(false)
   })
 })
