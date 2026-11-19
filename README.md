@@ -171,6 +171,30 @@ their questions filled in.
 - **Previews.** Previews accept a `model` field in the request (`ALLOW_MODEL_CHOICE`), to compare the models listed
   in `worker/receptionist.ts`. Production ignores it.
 
+### The wellness practice persona
+
+The wellness consulting demo has its own website assistant, Amani, who answers as the sample practice (Sable Leaf
+Wellness) instead of as Tari. It uses the same endpoint, `/api/receptionist`, with the same per-visitor and per-network
+limits and the same site-wide `AI_REPLIES_PER_DAY` cap, so the demo can't add to the day's AI use beyond that cap.
+
+- **Which persona answers.** The Worker decides from the request's `page` field (`personaFor` in `worker/prompt.ts`):
+  only `wellness-consulting`, sent by that demo's own chat, gets Amani's instructions (`wellnessPrompt`). Any other
+  value, valid or not, gets Tari exactly as before. Tari's chat is never told it is on that page
+  (`receptionistPage` in `src/receptionist/protocol.ts` gives it `home` there), and the page hides Tari's "Ask our AI"
+  buttons, so the two assistants can't be mixed up.
+- **Facts.** The prompt is built from `src/demos/wellness-consulting/business.ts`, the same file the demo's website and
+  booking page use, so they always agree.
+- **Guardrails.** The instructions put health and safety first: never diagnose, never recommend or dose treatments,
+  supplements or remedies, never claim cures or results, never ask for symptoms or medical history, point anyone
+  describing an emergency to emergency services or a doctor, decline anything unrelated to the practice, never ask for
+  contact details in the chat, and name no outside companies, models or hosts. It runs at a lower temperature (0.3).
+  Two checks don't depend on the AI at all: the chat shows a fixed emergency note when a message mentions an emergency
+  (`isEmergency` in `engine.ts`), and contact details go to the team through a form, never through the AI.
+- **Saved answers.** When there is no AI reply, the chat answers from `src/demos/wellness-consulting/assistant.ts`
+  and labels it "Saved answer". Emergencies and health questions always get the same safe answers there too.
+- **Tests.** `test/wellness.test.ts` checks the rules are in the prompt, that only that page gets the persona, that it
+  goes through the same limits and cap, and the saved answers.
+
 ## Video calls
 
 Visitors can also talk to Tari face to face: the video button in the chat header, or "Prefer to talk? Video call
@@ -246,7 +270,8 @@ the phone's share menu, or by copying the link). The footer tells visitors.
 
 Add `?for=` and a business name to a link and the visitor sees their own business in the demo, for example
 `/demos/whatsapp-ordering?for=Mama%27s+Kitchen` (a space can be `+` or `%20`). The name replaces the sample business
-name in the WhatsApp ordering and salon booking demos, adds a line to the home page, and Tari's greeting welcomes it.
+name in the WhatsApp ordering, salon booking and wellness consulting demos (in the wellness demo: the header, the
+sample website, the assistant's greeting and replies, and the WhatsApp messages), adds a line to the home page, and Tari's greeting welcomes it.
 Everything else stays the sample data, and the "Sample business" tag stays.
 
 - **Validation.** `src/lib/business-name.ts` trims the name, collapses spaces and accepts up to 40 characters: letters
@@ -269,7 +294,8 @@ tags from the source files, so nothing is copied.
 node scripts/outreach/links.mjs scripts/outreach/prospects.example.csv
 ```
 
-It warns when a name would be tidied and reports names, demos or tags the site would not accept. The example CSV uses
+It warns when a name would be tidied and reports names, demos or tags the site would not accept. It accepts every
+demo with a page, unlisted ones included. The example CSV uses
 invented businesses. `test/outreach-links.test.ts` checks the script against the site's own name rules and lists.
 
 The outreach kit is in `docs/outreach/`: message templates, a walk-in script, answers to common questions, a prospect
@@ -300,7 +326,7 @@ published with the site. The prices in it are numbers to test, not market facts.
 
 ## Demos
 
-Batches 1 to 3 of 5 (numbers refer to the brief's list of 25):
+Batches 1 to 3 of 5 (numbers refer to the brief's list of 25), plus one unlisted demo:
 
 | # | Demo | Sample business | Screens |
 |---|---|---|---|
@@ -319,6 +345,12 @@ Batches 1 to 3 of 5 (numbers refer to the brief's list of 25):
 | 13 | Events and ticketing | Msasa Sky Festival, Harare | Ticket shop, QR ticket wallet, gate scanner, check-in, sales |
 | 16 | Inventory and point of sale | Bramblewood Hardware & Garden, Austin | Checkout, inventory, reorder and purchase orders, daily sales |
 | 22 | Clinic and pharmacy system | Lindhaven Family Clinic & Pharmacy, Bulawayo | Front desk, reminders, dispensing, pharmacy stock |
+| – | Wellness practice: AI assistant and booking (unlisted) | Sable Leaf Wellness, Harare and Johannesburg | Website with a live AI assistant and lead capture, booking (in person at either office or online), a simulated WhatsApp conversation, owner view |
+
+The wellness demo is unlisted (see [Unlisted demos](#unlisted-demos)): open it at `/demos/wellness-consulting`.
+Its times are Harare and Johannesburg time (UTC+2) whatever the visitor's time zone. It asks only for a name, a phone
+number and an optional email, never health information. The WhatsApp screen is scripted and says so; nothing is sent.
+Deposits appear only as an "optional later" note.
 
 The SEO audit only checks its sample site. Its "Want a real audit of your own website?" panel sends the visitor's
 address to LIFELINE on WhatsApp.
@@ -337,8 +369,17 @@ section, the "Powered by LIFELINE AI CONCIERGE" frame and the "Sample data for d
 1. Create `src/demos/<slug>/index.tsx` with a default-exported component. Wrap the screens in `DemoAppShell` and
    report live figures with `useDemoMetrics`.
 2. Keep its state in `usePersistentState('<slug>.state', ...)` so "Reset demo" can clear it.
-3. Add an entry to `DEMOS` in `src/demos/registry.ts`. The home page, footer, WhatsApp messages and page frame
+3. Add an entry to `ALL_DEMOS` in `src/demos/registry.ts`. The home page, footer, WhatsApp messages and page frame
    pick it up from there. Each demo's code is downloaded only when its page is opened.
+
+### Unlisted demos
+
+A demo with `listed: false` has a working page and its own HTML file, with `<meta name="robots" content="noindex">`,
+but is left out of the gallery, the footer, "More demos", the demo count, `sitemap.xml` and the receptionist's
+knowledge. `DEMOS` holds the listed demos; `ALL_DEMOS` holds every demo with a page.
+
+The wellness consulting demo is unlisted by default. To list it, set `LIST_WELLNESS_DEMO = true` at the top of
+`src/demos/registry.ts` and merge. Nothing else needs changing: the tests follow the switch.
 
 ## Sample data rules
 
