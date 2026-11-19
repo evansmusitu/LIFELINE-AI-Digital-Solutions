@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BY_TAGS, REF_TAGS } from '../src/lib/count-events'
 import { parseBusinessName } from '../src/lib/business-name'
 import { SITE } from '../src/config/site'
-import { DEMOS } from '../src/demos/registry'
+import { ALL_DEMOS } from '../src/demos/registry'
 // @ts-expect-error plain Node script without types
 import { buildRow, cleanName, encodeValue, loadConfig, nameProblem, parseCsv } from '../scripts/outreach/links.mjs'
 
@@ -11,7 +11,8 @@ const config = loadConfig()
 describe('outreach link builder', () => {
   it('reads the address, demos and tags from the source, in sync with the site', () => {
     expect(config.baseUrl).toBe(SITE.url)
-    expect(config.slugs).toEqual(DEMOS.map((d) => d.slug))
+    // Every demo with a page, unlisted ones included: a link can be sent for any of them.
+    expect(config.slugs).toEqual(ALL_DEMOS.map((d) => d.slug))
     expect(config.refTags).toEqual([...REF_TAGS])
     expect(config.byTags).toEqual([...BY_TAGS])
   })

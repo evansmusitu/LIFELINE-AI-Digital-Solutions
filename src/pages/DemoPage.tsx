@@ -13,12 +13,15 @@ import { paths, scrollToSection } from '../lib/router'
 import { clearDemoStorage } from '../lib/storage'
 import { demoQuoteMessage } from '../lib/whatsapp'
 import { AskAiButton } from '../receptionist/launchers'
+import { receptionistPage } from '../receptionist/protocol'
 
 export function DemoPage({ demo }: { demo: DemoMeta }) {
   const [resetKey, setResetKey] = useState(0)
   const [metrics, setMetrics] = useState<DemoMetric[]>([])
   const toast = useToast()
   const quote = demoQuoteMessage(demo.title)
+  // A demo with its own AI assistant doesn't also offer Tari's "Ask our AI" buttons: two AIs on one page confuse.
+  const askTari = receptionistPage(demo.slug) === demo.slug
 
   const reset = () => {
     clearDemoStorage(demo.slug)
@@ -135,7 +138,7 @@ export function DemoPage({ demo }: { demo: DemoMeta }) {
               </span>
             </p>
             <div className="flex shrink-0 gap-2 max-md:hidden">
-              <AskAiButton variant="secondary" size="sm" label="Ask our AI about it" />
+              {askTari && <AskAiButton variant="secondary" size="sm" label="Ask our AI about it" />}
               <WhatsAppButton message={quote} label="Get a quote for this demo" size="sm" />
             </div>
           </div>
@@ -147,7 +150,7 @@ export function DemoPage({ demo }: { demo: DemoMeta }) {
         <ShareDemo demo={demo} />
       </div>
 
-      <BuildPlan demo={demo} quote={quote} />
+      <BuildPlan demo={demo} quote={quote} askTari={askTari} />
       <MoreDemos current={demo.slug} />
 
       <MobileCtaBar>
@@ -155,7 +158,7 @@ export function DemoPage({ demo }: { demo: DemoMeta }) {
           <LayoutGrid className="size-5" aria-hidden="true" />
         </LinkButton>
         <ShareIconButton demo={demo} />
-        <AskAiButton variant="secondary" label="Ask our AI about this demo" iconOnly />
+        {askTari && <AskAiButton variant="secondary" label="Ask our AI about this demo" iconOnly />}
         <WhatsAppButton
           message={quote}
           label="Get a quote for this demo"
@@ -232,7 +235,7 @@ function DemoError({ onRetry, onReset }: { onRetry: () => void; onReset: () => v
   )
 }
 
-function BuildPlan({ demo, quote }: { demo: DemoMeta; quote: string }) {
+function BuildPlan({ demo, quote, askTari }: { demo: DemoMeta; quote: string; askTari: boolean }) {
   return (
     <section id="build" aria-labelledby="build-title" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[0.9fr_1.1fr]">
@@ -260,7 +263,7 @@ function BuildPlan({ demo, quote }: { demo: DemoMeta; quote: string }) {
           </ul>
           <div className="mt-8 flex flex-wrap gap-3">
             <WhatsAppButton message={quote} label="Get a quote for this demo" size="lg" />
-            <AskAiButton variant="secondary" size="lg" label="Ask our AI about this build" />
+            {askTari && <AskAiButton variant="secondary" size="lg" label="Ask our AI about this build" />}
           </div>
         </div>
 

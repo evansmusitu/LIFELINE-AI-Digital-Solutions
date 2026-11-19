@@ -7,6 +7,7 @@ import { parseRoute, scrollToSection, useLocation } from './lib/router'
 import { DemoPage } from './pages/DemoPage'
 import { HomePage } from './pages/HomePage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { receptionistPage } from './receptionist/protocol'
 import { ReceptionistProvider } from './receptionist/ReceptionistProvider'
 
 const STUDIO_TITLE = 'LIFELINE AI CONCIERGE | Demo Studio'
@@ -52,8 +53,8 @@ export default function App() {
 
   return (
     <ToastProvider>
-      {/* The AI receptionist knows which demo is on screen. */}
-      <ReceptionistProvider page={demo ? demo.slug : 'home'}>
+      {/* The AI receptionist knows which demo is on screen (except a demo with its own assistant). */}
+      <ReceptionistProvider page={receptionistPage(demo?.slug)}>
         <a
           href="#main"
           onClick={(event) => {
