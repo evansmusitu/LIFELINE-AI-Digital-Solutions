@@ -8,6 +8,20 @@ export const RECEPTIONIST_PATH = '/api/receptionist'
 /** Written by the studioPages plugin in vite.config.ts from src/demos/registry.ts. */
 export const KNOWLEDGE_PATH = '/receptionist-knowledge.json'
 
+/**
+ * The wellness consulting demo. Its own website chat sends this as `page` and is answered as that
+ * sample practice's assistant, not as Tari (personaFor in worker/prompt.ts).
+ */
+export const WELLNESS_PAGE = 'wellness-consulting'
+
+/**
+ * The page Tari's chat and video calls are told about: the demo on screen, or "home". On a demo with
+ * its own assistant it is "home", so Tari's requests can never be answered by that assistant.
+ */
+export function receptionistPage(slug: string | undefined): string {
+  return slug && slug !== WELLNESS_PAGE ? slug : 'home'
+}
+
 export const LIMITS = {
   /** Characters in one visitor message. */
   visitorChars: 500,
@@ -28,7 +42,11 @@ export interface ChatTurn {
 
 export interface ReceptionistRequest {
   messages: ChatTurn[]
-  /** "home" or the slug of the demo page the visitor is on. */
+  /**
+   * "home" or the slug of the demo page the visitor is on. "wellness-consulting" is sent only by that
+   * demo's own website chat, and the Worker answers it as the sample practice's assistant instead of
+   * Tari (personaFor in worker/prompt.ts).
+   */
   page: string
   /** Random ID kept in this browser. Used only for the per-visitor rate limit. */
   visitor: string

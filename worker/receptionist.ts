@@ -1,7 +1,7 @@
 import { LIMITS, type ChatTurn, type NoReply, type ReceptionistRequest } from '../src/receptionist/protocol'
 import { BASE_HEADERS, isRecord, json, loadKnowledge, pageName, readBody, rejectRequest, requestNetwork, visitorId } from './http'
 import type { ChatLimiter } from './limiter'
-import { systemPrompt } from './prompt'
+import { personaFor, systemPrompt, wellnessPrompt } from './prompt'
 import type { Count } from './stats'
 import { replyStream } from './stream'
 
@@ -148,8 +148,16 @@ export async function handleReceptionist(
   }
   if (chat.first) count('chat_started')
 
-  const knowledge = await loadKnowledge(env, url.origin)
-  const page = knowledge.demos.some((d) => d.slug === chat.page) ? chat.page : 'home'
+  // Tari everywhere, except the wellness demo's own chat (worker/prompt.ts). Same limits and daily cap for both.
+  const persona = personaFor(chat.page)
+  let system: string
+  if (persona === 'wellness') {
+    system = wellnessPrompt()
+  } else {
+    const knowledge = await loadKnowledge(env, url.origin)
+    const page = knowledge.demos.some((d) => d.slug === chat.page) ? chat.page : 'home'
+    system = systemPrompt(knowledge, page)
+  }
   const configured = Object.hasOwn(MODELS, env.AI_MODEL) ? env.AI_MODEL : DEFAULT_MODEL
   const model =
     env.ALLOW_MODEL_CHOICE === 'true' && chat.model && Object.hasOwn(MODELS, chat.model) ? chat.model : configured
@@ -158,10 +166,11 @@ export async function handleReceptionist(
   try {
     const run = env.AI.run.bind(env.AI) as unknown as RunStream
     upstream = await run(model, {
-      messages: [{ role: 'system', content: systemPrompt(knowledge, page) }, ...chat.messages],
+      messages: [{ role: 'system', content: system }, ...chat.messages],
       stream: true,
       max_tokens: MAX_REPLY_TOKENS,
-      temperature: 0.5,
+      // The wellness assistant runs cooler, so it keeps closer to its health and safety rules.
+      temperature: persona === 'wellness' ? 0.3 : 0.5,
       ...MODELS[model],
     })
   } catch (error) {
