@@ -1,6 +1,6 @@
 import { BUSINESS, ONLINE_LINK } from './business'
-import { bookingDays, confirmationMessage, dayLabel, firstNameOf, hhmm, practiceDay, serviceById, slotsFor, startOf } from './engine'
-import type { Booking } from './types'
+import { bookingDays, confirmationMessage, dayLabel, firstNameOf, freeRef, hhmm, practiceDay, serviceById, slotsFor, startOf, stillFree } from './engine'
+import type { Booking, WellnessState } from './types'
 
 /*
  * The scripted WhatsApp conversation: a client enquires, the practice's assistant answers, books a
@@ -21,6 +21,9 @@ export interface ScriptLine {
 
 export const CLIENT = { name: 'Tendai Sibanda', phone: '+263 ••• ••• 908' }
 
+/** The id of the booking the conversation makes. */
+export const SCRIPT_BOOKING = 'whatsapp-script'
+
 export interface ScriptPlan {
   /** The booking the conversation makes, or null when no online time is free this week. */
   booking: Booking | null
@@ -38,7 +41,7 @@ export function planScript(bookings: Booking[], now: number, ref: string): Scrip
       if (!slots.length) continue
       const first = slots[0]
       const booking: Booking = {
-        id: 'whatsapp-script',
+        id: SCRIPT_BOOKING,
         ref,
         client: { ...CLIENT },
         serviceId: service.id,
@@ -54,6 +57,31 @@ export function planScript(bookings: Booking[], now: number, ref: string): Scrip
     }
   }
   return { booking: null, offered: [] }
+}
+
+/**
+ * Called just before the conversation books. The plan was made when the conversation started, and a
+ * booking made on the Book screen since then may have taken its time. So: keep the planned time if
+ * it is still free, otherwise plan the next free one (the conversation then shows those times), and
+ * take a reference that no booking uses yet.
+ */
+export function replanBeforeBooking(plan: ScriptPlan, bookings: Booking[], now: number, nextRef: number): ScriptPlan {
+  const others = bookings.filter((b) => b.id !== SCRIPT_BOOKING)
+  const { ref } = freeRef(others, nextRef)
+  if (plan.booking && stillFree(plan.booking, others, now)) return { ...plan, booking: { ...plan.booking, ref, createdAt: now } }
+  return planScript(others, now, ref)
+}
+
+/**
+ * Adds the conversation's booking to the practice's bookings, checked on the latest state: never
+ * twice, never on a time that has been taken, and never with a reference already in use.
+ */
+export function addScriptBooking(state: WellnessState, booking: Booking, now: number): WellnessState {
+  if (state.bookings.some((b) => b.id === booking.id)) return state
+  if (!stillFree(booking, state.bookings, now)) return state
+  const taken = state.bookings.some((b) => b.ref === booking.ref)
+  const { ref, next } = taken ? freeRef(state.bookings, state.nextRef) : { ref: booking.ref, next: Number(booking.ref.slice(3)) + 1 }
+  return { ...state, bookings: [...state.bookings, { ...booking, ref }], nextRef: Math.max(state.nextRef, next) }
 }
 
 export function scriptLines(plan: ScriptPlan): ScriptLine[] {

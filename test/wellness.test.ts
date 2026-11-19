@@ -26,6 +26,7 @@ import {
   isOpenDay,
   checkDetails,
   confirmationMessage,
+  freeRef,
   freeSlots,
   isEmergency,
   maskEmail,
@@ -43,7 +44,7 @@ import {
 } from '../src/demos/wellness-consulting/engine'
 import type { Booking } from '../src/demos/wellness-consulting/types'
 import { assistantRequest, greetingMessage } from '../src/demos/wellness-consulting/useAssistantChat'
-import { planScript, scriptLines } from '../src/demos/wellness-consulting/whatsapp-script'
+import { addScriptBooking, planScript, replanBeforeBooking, scriptLines } from '../src/demos/wellness-consulting/whatsapp-script'
 import { receptionistPage, toKnowledge, WELLNESS_PAGE } from '../src/receptionist/protocol'
 import type { ChatLimiter } from '../worker/limiter'
 import { personaFor, systemPrompt, wellnessPrompt } from '../worker/prompt'
@@ -370,6 +371,71 @@ describe('the WhatsApp simulation', () => {
     expect(lines.at(-1)?.from).toBe('owner')
     const refusal = lines.find((l) => l.from === 'assistant' && /can’t give medical advice/.test(l.text))
     expect(refusal?.text).not.toMatch(/blood pressure/)
+  })
+})
+
+describe('the WhatsApp simulation never double-books', () => {
+  const request = (b: Booking) => ({ serviceId: b.serviceId, mode: b.mode, practitioner: b.practitionerId, day: practiceDay(b.start), minute: practiceMinute(b.start) })
+  /** The visitor books the script's planned time on the Book screen while the conversation is half way. */
+  function takenOnBookScreen() {
+    const state = createInitialState(MON)
+    const plan = planScript(state.bookings, MON, freeRef(state.bookings, state.nextRef).ref)
+    const planned = plan.booking!
+    const check = checkBooking(state.bookings, request(planned), MON + 60_000)
+    expect(check.ok).toBe(true)
+    const mine = booking({ id: 'mine', ref: freeRef(state.bookings, state.nextRef).ref, mode: 'online', practitionerId: planned.practitionerId, start: planned.start, createdAt: MON + 60_000 })
+    const after = { ...state, bookings: [...state.bookings, mine], nextRef: freeRef(state.bookings, state.nextRef).next }
+    return { state: after, plan, planned, mine }
+  }
+
+  it('plans with the same reference the Book screen would use next, so it must take a fresh one before booking', () => {
+    const { plan, mine } = takenOnBookScreen()
+    expect(plan.booking!.ref).toBe(mine.ref)
+  })
+
+  it('re-checks the time just before booking, and picks another free time when it has been taken', () => {
+    const { state, planned } = takenOnBookScreen()
+    const at = MON + 2 * 60_000
+    const fresh = replanBeforeBooking({ booking: planned, offered: [] }, state.bookings, at, state.nextRef)
+    const b = fresh.booking!
+    expect(b.start === planned.start && b.practitionerId === planned.practitionerId).toBe(false)
+    expect(checkBooking(state.bookings, request(b), at).ok).toBe(true)
+    expect(state.bookings.some((x) => x.ref === b.ref)).toBe(false)
+    // The conversation shows the new times, and the chosen one is the one booked.
+    const lines = scriptLines(fresh)
+    expect(lines.find((l) => l.action === 'book')?.text).toContain(b.ref)
+    expect(fresh.offered[0]).toEqual({ day: practiceDay(b.start), minute: practiceMinute(b.start) })
+  })
+
+  it('keeps the planned time when it is still free, with a reference nobody uses', () => {
+    const state = createInitialState(MON)
+    const plan = planScript(state.bookings, MON, 'SL-1031')
+    expect(state.bookings.some((b) => b.ref === 'SL-1031')).toBe(true)
+    const kept = replanBeforeBooking(plan, state.bookings, MON + 60_000, state.nextRef)
+    expect(kept.booking!.start).toBe(plan.booking!.start)
+    expect(kept.booking!.practitionerId).toBe(plan.booking!.practitionerId)
+    expect(state.bookings.some((b) => b.ref === kept.booking!.ref)).toBe(false)
+  })
+
+  it('adds the booking once, never on a taken time, and with a unique reference', () => {
+    const { state, planned, mine } = takenOnBookScreen()
+    const at = MON + 2 * 60_000
+    // A stale plan whose time has gone is not added at all.
+    expect(addScriptBooking(state, planned, at)).toBe(state)
+    const fresh = replanBeforeBooking({ booking: planned, offered: [] }, state.bookings, at, state.nextRef).booking!
+    const added = addScriptBooking(state, fresh, at)
+    expect(added.bookings.length).toBe(state.bookings.length + 1)
+    expect(addScriptBooking(added, fresh, at)).toBe(added)
+    // A reference taken in the meantime is replaced.
+    const sameRef = addScriptBooking(state, { ...fresh, ref: mine.ref }, at)
+    const refs = sameRef.bookings.map((b) => b.ref)
+    expect(new Set(refs).size).toBe(refs.length)
+    expect(sameRef.nextRef).toBeGreaterThan(Math.max(...refs.map((r) => Number(r.slice(3)))))
+    // Nobody is booked twice at overlapping times.
+    for (const b of added.bookings) {
+      const clash = added.bookings.filter((o) => o.id !== b.id && o.practitionerId === b.practitionerId && o.start < b.start + b.minutes * 60_000 && b.start < o.start + o.minutes * 60_000)
+      expect(clash, b.id).toEqual([])
+    }
   })
 })
 

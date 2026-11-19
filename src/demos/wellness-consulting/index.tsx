@@ -17,6 +17,7 @@ import {
   dayWord,
   emptyDraft,
   firstNameOf,
+  freeRef,
   maskEmail,
   maskPhone,
   messageLog,
@@ -31,7 +32,7 @@ import type { Booking, Draft, Lead, WellnessState } from './types'
 import { useAssistantChat } from './useAssistantChat'
 import { WebsiteScreen, type LeadInput } from './WebsiteScreen'
 import { WhatsAppScreen } from './WhatsAppScreen'
-import { planScript, scriptLines, CLIENT, type ScriptPlan } from './whatsapp-script'
+import { addScriptBooking, planScript, replanBeforeBooking, scriptLines, CLIENT, SCRIPT_BOOKING, type ScriptPlan } from './whatsapp-script'
 
 const ACCENT = { base: '#0f766e', strong: '#115e59', soft: '#f0fdfa', ink: '#134e4a' }
 const SCRIPT_LEAD = 'lead-whatsapp-script'
@@ -77,7 +78,7 @@ export default function WellnessConsultingDemo() {
     if (!check.ok) return check.message
     const booking: Booking = {
       id: uid('booking'),
-      ref: `SL-${state.nextRef}`,
+      ref: freeRef(state.bookings, state.nextRef).ref,
       client: { name: d.name.trim().replace(/\s+/g, ' '), phone: maskPhone(d.phone), email: d.email.trim() ? maskEmail(d.email) : undefined },
       serviceId: service.id,
       practitionerId: check.practitionerId,
@@ -92,7 +93,9 @@ export default function WellnessConsultingDemo() {
     setState((s) => {
       // Checked again on the latest state, so a double click can never book the same time twice.
       if (!checkBooking(s.bookings, { ...request, practitioner: check.practitionerId }, at).ok) return s
-      return { ...s, bookings: [...s.bookings, booking], nextRef: s.nextRef + 1 }
+      // References stay unique, also if the WhatsApp conversation has just used this one.
+      const { ref, next } = freeRef(s.bookings, s.nextRef)
+      return { ...s, bookings: [...s.bookings, { ...booking, ref }], nextRef: next }
     })
     setConfirmedId(booking.id)
     toast(`Booked: ${service.name} with ${firstNameOf(check.practitionerId)} ${dayWord(d.day, at)} at ${timeLabel(booking.start)}. Ref ${booking.ref}.`, 'success')
@@ -127,11 +130,17 @@ export default function WellnessConsultingDemo() {
 
   /* The WhatsApp simulation */
 
-  const lines = scriptLines(wa.plan ?? planScript(state.bookings, now, `SL-${state.nextRef}`))
+  const lines = scriptLines(wa.plan ?? planScript(state.bookings, now, freeRef(state.bookings, state.nextRef).ref))
   const shown = Math.min(wa.shown, lines.length)
 
   const next = useCallback(() => {
-    setWa((w) => ({ plan: w.plan ?? planScript(state.bookings, clock(), `SL-${state.nextRef}`), shown: w.shown + 1 }))
+    setWa((w) => {
+      const at = clock()
+      const plan = w.plan ?? planScript(state.bookings, at, freeRef(state.bookings, state.nextRef).ref)
+      // Just before the line that books: check the time again, as the Book screen may have taken it.
+      const booking = scriptLines(plan)[w.shown]?.action === 'book'
+      return { plan: booking ? replanBeforeBooking(plan, state.bookings, at, state.nextRef) : plan, shown: w.shown + 1 }
+    })
   }, [setWa, state.bookings, state.nextRef, clock])
 
   // "Play all" runs until the last line.
@@ -150,10 +159,13 @@ export default function WellnessConsultingDemo() {
     setState((s) => {
       let changed = false
       let { bookings, leads, nextRef } = s
-      if (booked && !bookings.some((b) => b.id === booked.id)) {
-        bookings = [...bookings, booked]
-        nextRef += 1
-        changed = true
+      if (booked) {
+        const added = addScriptBooking(s, booked, clock())
+        if (added !== s) {
+          bookings = added.bookings
+          nextRef = added.nextRef
+          changed = true
+        }
       }
       const status: Lead['status'] = handedOver ? 'Handed over' : booked ? 'Booked' : 'New'
       const existing = leads.find((l) => l.id === SCRIPT_LEAD)
@@ -183,7 +195,7 @@ export default function WellnessConsultingDemo() {
   const restartScript = () => {
     setPlaying(false)
     setWa({ shown: 0, plan: null })
-    setState((s) => ({ ...s, bookings: s.bookings.filter((b) => b.id !== 'whatsapp-script'), leads: s.leads.filter((l) => l.id !== SCRIPT_LEAD) }))
+    setState((s) => ({ ...s, bookings: s.bookings.filter((b) => b.id !== SCRIPT_BOOKING), leads: s.leads.filter((l) => l.id !== SCRIPT_LEAD) }))
   }
 
   /* Owner actions */

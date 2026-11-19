@@ -207,6 +207,21 @@ export function checkBooking(bookings: Booking[], request: BookingRequest, now: 
   return { ok: true, practitionerId: p.id }
 }
 
+/** True while this booking's own time is still free for its consultant, leaving the booking itself out. */
+export function stillFree(booking: Booking, bookings: Booking[], now: number): boolean {
+  const others = bookings.filter((b) => b.id !== booking.id)
+  const request = { serviceId: booking.serviceId, mode: booking.mode, practitioner: booking.practitionerId, day: practiceDay(booking.start), minute: practiceMinute(booking.start) }
+  return checkBooking(others, request, now).ok
+}
+
+/** The first booking reference ("SL-1042") from `nextRef` up that no booking uses, and the number after it. */
+export function freeRef(bookings: Booking[], nextRef: number): { ref: string; next: number } {
+  const used = new Set(bookings.map((b) => b.ref))
+  let n = nextRef
+  while (used.has(`SL-${n}`)) n += 1
+  return { ref: `SL-${n}`, next: n + 1 }
+}
+
 /** A fresh booking, keeping the contact details already typed. */
 export const emptyDraft = (keep?: Pick<Draft, 'name' | 'phone' | 'email'>): Draft => ({
   step: 1,
