@@ -165,7 +165,14 @@ function AssistantChat({ business, messages, pending, busy, limitReached, handed
   }
 
   return (
-    <section aria-label={`Chat with ${BUSINESS.assistant}, the ${name} assistant`} className="flex h-[36rem] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg lg:sticky lg:top-4 lg:h-[42rem]">
+    <section
+      aria-label={`Chat with ${BUSINESS.assistant}, the ${name} assistant`}
+      className={cn(
+        '@container flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg lg:sticky lg:top-4',
+        // Taller while the lead form is open, so the conversation keeps room above it on a phone.
+        lead ? 'h-[46rem]' : 'h-[36rem] lg:h-[42rem]',
+      )}
+    >
       <div className="flex items-center gap-3 bg-(--accent) px-4 py-3 text-white">
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/15">
           {handedOver ? <UserRound className="size-5" aria-hidden="true" /> : <Bot className="size-5" aria-hidden="true" />}
@@ -180,7 +187,7 @@ function AssistantChat({ business, messages, pending, busy, limitReached, handed
         </button>
       </div>
 
-      <div ref={listRef} role="log" aria-live="polite" aria-label="Conversation" className="flex-1 space-y-2.5 overflow-y-auto bg-slate-50 px-3 py-4">
+      <div ref={listRef} role="log" aria-live="polite" aria-label="Conversation" className="min-h-36 flex-1 space-y-2.5 overflow-y-auto bg-slate-50 px-3 py-4">
         {messages.map((m) => (
           <Bubble key={m.id} message={m} business={business} />
         ))}
@@ -258,10 +265,12 @@ function AssistantChat({ business, messages, pending, busy, limitReached, handed
           </form>
         </>
       )}
-      <p className="border-t border-slate-100 bg-white px-3 py-2 text-[0.7rem] leading-snug text-slate-600">
-        A live AI assistant for this sample practice. It doesn’t give medical advice. Please don’t share health details or contact
-        details in the chat: the buttons above send your details to the team, not to the AI.
-      </p>
+      {!lead && (
+        <p className="border-t border-slate-100 bg-white px-3 py-2 text-[0.7rem] leading-snug text-slate-600">
+          A live AI assistant for this sample practice. It doesn’t give medical advice. Please don’t share health details or contact
+          details in the chat: the buttons above send your details to the team, not to the AI.
+        </p>
+      )}
     </section>
   )
 }
@@ -327,12 +336,25 @@ function LeadForm({ handover, onCancel, onSubmit }: { handover: boolean; onCance
           <X className="size-4" aria-hidden="true" />
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      {/* One column in a narrow chat (a phone, or the chat beside the website), two when it is wide. */}
+      <div className="grid grid-cols-1 gap-2 @md:grid-cols-2">
         <Field label="Your name" htmlFor={`${id}-name`} error={tried ? nameError : undefined}>
           <TextInput id={`${id}-name`} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" maxLength={60} aria-invalid={tried && !!nameError} />
         </Field>
-        <Field label="WhatsApp number or email" htmlFor={`${id}-contact`} error={tried ? contactError : undefined}>
-          <TextInput id={`${id}-contact`} value={contact} onChange={(e) => setContact(e.target.value)} inputMode="email" maxLength={100} aria-invalid={tried && !!contactError} />
+        <Field label="Phone (WhatsApp) or email" htmlFor={`${id}-contact`} error={tried ? contactError : undefined}>
+          {/* A plain text field: it takes a phone number or an email address, so no keyboard type is forced. */}
+          <TextInput
+            id={`${id}-contact`}
+            type="text"
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
+            placeholder="+263 77 123 4567 or you@example.com"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            maxLength={100}
+            aria-invalid={tried && !!contactError}
+          />
         </Field>
       </div>
       <Field label="What are you interested in?" htmlFor={`${id}-interest`}>
@@ -342,7 +364,7 @@ function LeadForm({ handover, onCancel, onSubmit }: { handover: boolean; onCance
           ))}
         </SelectInput>
       </Field>
-      <p className="text-[0.7rem] text-slate-600">Goes to the team only, to reply to you. No health information needed.</p>
+      <p className="text-[0.7rem] text-slate-600">Goes to the team only, not to the AI, to reply to you. No health information needed.</p>
       <AppButton type="submit" className="w-full">
         {handover ? 'Ask the team to contact me' : 'Send my details'}
       </AppButton>
