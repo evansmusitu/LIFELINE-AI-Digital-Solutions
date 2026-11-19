@@ -3,7 +3,7 @@ import { useId, useState, type Dispatch, type FormEvent, type SetStateAction } f
 import { cn } from '../../lib/cn'
 import { initials } from '../../lib/format'
 import { AppButton, Field, Notice, TextInput } from '../ui'
-import { BUSINESS, OFFICES, ONLINE, PRACTITIONERS, modeLabel, priceLabel, type Mode } from './business'
+import { BUSINESS, OFFICES, ONLINE, PRACTITIONERS, modeLabel, paymentLine, priceLabel, type Mode } from './business'
 import {
   bookableServices,
   bookingDays,
@@ -380,7 +380,7 @@ function Confirmation({ business, booking, now, onAnother, onOwner }: { business
           <dt className="text-slate-600">Consultant</dt>
           <dd className="text-slate-900">{practitionerById(booking.practitionerId).name}</dd>
           <dt className="text-slate-600">Price</dt>
-          <dd className="text-slate-900">{priceLabel(service)}, paid at the consultation. No deposit.</dd>
+          <dd className="text-slate-900">{paymentLine(service, booking.mode)}</dd>
           <dt className="text-slate-600">Contact</dt>
           <dd className="text-slate-900">
             {booking.client.name}, {booking.client.phone}

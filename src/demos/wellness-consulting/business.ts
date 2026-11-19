@@ -61,10 +61,16 @@ export const OFFICES: readonly Office[] = [
   },
 ]
 
+/**
+ * When the online video link comes. The one wording for the website, the assistant's facts and the
+ * WhatsApp messages; the confirmation itself is sent at booking (POLICIES.reminders).
+ */
+export const ONLINE_LINK = 'The link comes by WhatsApp an hour before the session.'
+
 export const ONLINE = {
   hours: [null, [at(8), at(18)], [at(8), at(18)], [at(8), at(18)], [at(8), at(18)], [at(8), at(18)], [at(9), at(13)]] as WeekHours,
   hoursText: 'Monday to Friday 08:00 to 18:00, Saturday 09:00 to 13:00, closed on Sundays',
-  how: 'Online consultations are private video calls. The link comes by WhatsApp or email with the booking confirmation, and works on a phone or laptop. A phone call is fine if the connection is weak.',
+  how: `Online consultations are private video calls, on a phone or laptop. The WhatsApp confirmation is sent when you book. ${ONLINE_LINK} A phone call is fine if the connection is weak.`,
 }
 
 export const IN_PERSON_HOW =
@@ -181,8 +187,16 @@ export const PRACTITIONERS: readonly Practitioner[] = [
   },
 ]
 
+/** How sessions are paid: the same words in the assistant's facts and on the booking confirmation. */
+export const PAYMENT = {
+  free: 'Free. No payment needed.',
+  inPerson: 'paid at the office',
+  online: 'paid after the WhatsApp confirmation message',
+  noDeposit: 'No deposit is needed to book.',
+} as const
+
 export const POLICIES = {
-  payment: 'No deposit is needed to book. Consultations are paid at the office or, for online sessions, after the confirmation message.',
+  payment: `${PAYMENT.noDeposit} The free discovery call needs no payment. In-person consultations are ${PAYMENT.inPerson}; online sessions are ${PAYMENT.online}.`,
   changes: 'To change or cancel, reply to the confirmation message on WhatsApp, ideally at least 24 hours before.',
   reminders: 'A WhatsApp confirmation is sent when you book and a reminder the day before.',
   noMedical:
@@ -195,3 +209,9 @@ export const modeLabel = (mode: Mode): string =>
 /** "$45", "Free", "from $150". */
 export const priceLabel = (service: Pick<Service, 'price' | 'priceText'>): string =>
   service.priceText ?? (service.price === 0 ? 'Free' : `$${service.price}`)
+
+/** The price line on a booking confirmation: free services need no payment, paid ones say how they are paid. */
+export const paymentLine = (service: Pick<Service, 'price' | 'priceText'>, mode: Mode): string =>
+  service.price === 0 && !service.priceText
+    ? PAYMENT.free
+    : `${priceLabel(service)}, ${mode === 'online' ? PAYMENT.online : PAYMENT.inPerson}. ${PAYMENT.noDeposit}`

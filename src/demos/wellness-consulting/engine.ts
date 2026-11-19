@@ -3,6 +3,7 @@ import {
   LUNCH,
   OFFICES,
   ONLINE,
+  ONLINE_LINK,
   PRACTITIONERS,
   SERVICES,
   type Mode,
@@ -274,7 +275,7 @@ export function personalised(text: string, business: string | null): string {
 
 const where = (b: Pick<Booking, 'mode'>) =>
   b.mode === 'online'
-    ? 'Online video call. The link comes here an hour before.'
+    ? `Online video call. ${ONLINE_LINK}`
     : `${OFFICES.find((o) => o.id === b.mode)?.area ?? ''} office.`
 
 const firstWord = (name: string) => name.trim().split(/\s+/)[0] ?? name

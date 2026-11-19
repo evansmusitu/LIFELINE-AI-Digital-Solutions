@@ -2,7 +2,19 @@
 import { describe, expect, it } from 'vitest'
 import { ALL_DEMOS, DEMOS, LIST_WELLNESS_DEMO, findDemo } from '../src/demos/registry'
 import { EMERGENCY_ANSWER, savedAnswer, ASSISTANT_GREETING } from '../src/demos/wellness-consulting/assistant'
-import { BUSINESS, OFFICES, ONLINE, PRACTITIONERS, SERVICES, WELLNESS_SLUG, type Mode } from '../src/demos/wellness-consulting/business'
+import {
+  BUSINESS,
+  OFFICES,
+  ONLINE,
+  ONLINE_LINK,
+  PAYMENT,
+  POLICIES,
+  PRACTITIONERS,
+  SERVICES,
+  WELLNESS_SLUG,
+  paymentLine,
+  type Mode,
+} from '../src/demos/wellness-consulting/business'
 import { createInitialState } from '../src/demos/wellness-consulting/data'
 import {
   EMERGENCY_NOTE,
@@ -278,6 +290,34 @@ describe('WhatsApp messages', () => {
     expect(text).toContain('Belgravia, Harare office')
     expect(text).toContain(BUSINESS.name)
     expect(reminderMessage(b)).toContain('tomorrow at 14:00')
+  })
+
+  it('says when the online link comes in the same words everywhere: prompt, website, confirmation, reminder and script', () => {
+    const online = booking({ mode: 'online', practitionerId: 'farai', start: startOf(day(1), hm(14)), createdAt: MON })
+    expect(ONLINE_LINK).toBe('The link comes by WhatsApp an hour before the session.')
+    expect(wellnessPrompt()).toContain(ONLINE_LINK)
+    expect(ONLINE.how).toContain(ONLINE_LINK)
+    expect(confirmationMessage(online)).toContain(ONLINE_LINK)
+    expect(reminderMessage(online)).toContain(ONLINE_LINK)
+    expect(scriptLines(planScript([], MON, 'SL-1')).map((l) => l.text).join('\n')).toContain(ONLINE_LINK)
+    // The confirmation itself is sent at booking, in the prompt's facts and on the website.
+    expect(POLICIES.reminders).toContain('confirmation is sent when you book')
+    expect(wellnessPrompt()).toContain(POLICIES.reminders)
+    expect(ONLINE.how).toContain('confirmation is sent when you book')
+    // No other timing anywhere.
+    const all = [wellnessPrompt(), ONLINE.how, confirmationMessage(online), reminderMessage(online), ...scriptLines(planScript([], MON, 'SL-1')).map((l) => l.text)].join('\n')
+    expect(all).not.toMatch(/with the (booking )?confirmation|comes here|by WhatsApp or email/)
+    expect(all.match(/link comes/g)?.length).toBe(all.split(ONLINE_LINK).length - 1)
+  })
+
+  it('states the price and payment the way the business facts do', () => {
+    expect(paymentLine(serviceById('discovery'), 'online')).toBe('Free. No payment needed.')
+    expect(paymentLine(consultation, 'harare')).toBe('$45, paid at the office. No deposit is needed to book.')
+    expect(paymentLine(consultation, 'johannesburg')).toBe('$45, paid at the office. No deposit is needed to book.')
+    expect(paymentLine(consultation, 'online')).toBe('$45, paid after the WhatsApp confirmation message. No deposit is needed to book.')
+    const facts = wellnessPrompt()
+    expect(facts).toContain(`Payment: ${POLICIES.payment}`)
+    for (const words of [PAYMENT.inPerson, PAYMENT.online, PAYMENT.noDeposit, 'The free discovery call needs no payment']) expect(POLICIES.payment).toContain(words)
   })
 
   it('sends the reminder at 17:00 the day before, if the booking was made before then', () => {

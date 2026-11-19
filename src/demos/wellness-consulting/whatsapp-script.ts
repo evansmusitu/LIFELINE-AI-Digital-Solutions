@@ -1,4 +1,4 @@
-import { BUSINESS } from './business'
+import { BUSINESS, ONLINE_LINK } from './business'
 import { bookingDays, confirmationMessage, dayLabel, firstNameOf, hhmm, practiceDay, serviceById, slotsFor, startOf } from './engine'
 import type { Booking } from './types'
 
@@ -61,7 +61,7 @@ export function scriptLines(plan: ScriptPlan): ScriptLine[] {
     { from: 'client', text: 'Hi, I saw your page on Facebook. Do you do online consultations? I’m in Bulawayo.' },
     {
       from: 'assistant',
-      text: `Hi! I’m ${BUSINESS.assistant}, the ${BUSINESS.name} assistant (an AI). Yes: online consultations are private video calls, and the link comes here on WhatsApp. A first wellness consultation is 60 minutes, $45. Shall I find you a time?`,
+      text: `Hi! I’m ${BUSINESS.assistant}, the ${BUSINESS.name} assistant (an AI). Yes: online consultations are private video calls. ${ONLINE_LINK} A first wellness consultation is 60 minutes, $45. Shall I find you a time?`,
     },
     { from: 'client', text: 'Yes please. An afternoon if possible.' },
   ]
