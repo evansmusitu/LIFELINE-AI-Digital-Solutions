@@ -78,7 +78,7 @@ export function encodeValue(value) {
   return encodeURIComponent(value).replace(/'/g, '%27').replace(/[!()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
 }
 
-/** The site address, demo slugs, ref tags and by tags, read from the source files. */
+/** The site address, demo slugs (every demo with a page, unlisted ones too), ref tags and by tags, read from the source files. */
 export function loadConfig() {
   const url = /url:\s*'(https?:\/\/[^']+)'/.exec(read('src/config/site.ts'))?.[1]
   const slugs = [...read('src/demos/registry.ts').matchAll(/^\s*slug:\s*'([^']+)'/gm)].map((m) => m[1])

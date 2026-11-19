@@ -14,6 +14,8 @@ interface SiteInfo {
 
 interface DemoInfo {
   slug: string
+  /** false: an unlisted demo (see LIST_WELLNESS_DEMO in src/demos/registry.ts). */
+  listed?: boolean
   title: string
   summary: string
   industries: string[]
@@ -26,6 +28,8 @@ interface PageMeta {
   /** Shown under the title in WhatsApp, Facebook, LinkedIn and X link previews. */
   previewDescription: string
   url: string
+  /** Asks search engines not to index the page: unlisted demos. */
+  noindex?: boolean
 }
 
 function escapeHtml(text: string): string {
@@ -42,6 +46,7 @@ function metaTags(page: PageMeta): string {
     `<meta property="og:description" content="${escapeHtml(page.previewDescription)}" />`,
     `<meta property="og:url" content="${url}" />`,
     `<link rel="canonical" href="${url}" />`,
+    ...(page.noindex ? ['<meta name="robots" content="noindex" />'] : []),
   ].join('\n    ')
 }
 
@@ -61,6 +66,7 @@ function demoMeta(site: SiteInfo, demo: DemoInfo): PageMeta {
     description: demo.summary,
     previewDescription: demo.summary,
     url: `${site.url}/demos/${demo.slug}`,
+    noindex: demo.listed === false,
   }
 }
 
@@ -68,15 +74,16 @@ async function loadContent() {
   const options = { configFile: false, logLevel: 'silent' } as const
   const [site, registry] = await Promise.all([
     runnerImport<{ SITE: SiteInfo }>('./src/config/site.ts', options),
-    runnerImport<{ DEMOS: DemoInfo[] }>('./src/demos/registry.ts', options),
+    runnerImport<{ ALL_DEMOS: DemoInfo[] }>('./src/demos/registry.ts', options),
   ])
-  return { site: site.module.SITE, demos: registry.module.DEMOS }
+  return { site: site.module.SITE, demos: registry.module.ALL_DEMOS }
 }
 
 /**
  * Gives every page its own HTML file, so link previews and search engines (which don't run
  * JavaScript) see the right title and description: dist/index.html for the home page and
  * dist/demos/<slug>.html for each demo. Also writes sitemap.xml and robots.txt.
+ * Unlisted demos get a page (with noindex) but stay out of the sitemap and the receptionist's knowledge.
  */
 function studioPages(): Plugin {
   let content: ReturnType<typeof loadContent> | undefined
@@ -105,7 +112,8 @@ function studioPages(): Plugin {
         this.emitFile({ type: 'asset', fileName: `demos/${demo.slug}.html`, source: index.source.replace(home, () => page) })
       }
 
-      const urls = [homeMeta(site).url, ...demos.map((demo) => demoMeta(site, demo).url)]
+      const listed = demos.filter((demo) => demo.listed !== false)
+      const urls = [homeMeta(site).url, ...listed.map((demo) => demoMeta(site, demo).url)]
       this.emitFile({
         type: 'asset',
         fileName: 'sitemap.xml',
@@ -125,7 +133,7 @@ function studioPages(): Plugin {
 
       // The demo list the AI receptionist answers from (worker/receptionist.ts reads it). Built from
       // the registry, so a new demo is known to the receptionist as soon as it is on the site.
-      const knowledge = toKnowledge(demos)
+      const knowledge = toKnowledge(listed)
       this.emitFile({
         type: 'asset',
         fileName: KNOWLEDGE_PATH.slice(1),

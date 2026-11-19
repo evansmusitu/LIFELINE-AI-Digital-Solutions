@@ -4,6 +4,7 @@ import {
   Cable,
   FileSearch,
   Headset,
+  Leaf,
   PanelsLeftRight,
   ScanBarcode,
   Scissors,
@@ -24,6 +25,15 @@ import type { Service } from '../config/site'
  * WhatsApp messages all read from this list. Demo code loads only when it is opened.
  * To add a demo: create src/demos/<slug>/index.tsx and add an entry here.
  */
+
+/**
+ * THE SWITCH for the wellness consulting demo (/demos/wellness-consulting).
+ * false: unlisted. It works for anyone with the link, but it is left out of the gallery, the footer,
+ * "More demos", the demo count, the sitemap and the AI receptionist's knowledge, and its page asks
+ * search engines not to index it (noindex).
+ * true: listed like every other demo. Nothing else needs changing.
+ */
+export const LIST_WELLNESS_DEMO = false
 
 export const INDUSTRIES = [
   'Retail & e-commerce',
@@ -47,8 +57,13 @@ export interface BuildStep {
 
 export interface DemoMeta {
   slug: string
-  /** Number in the brief's list of 25 demos. */
+  /** Number in the brief's list of 25 demos, or 0 for a demo outside that list. */
   number: number
+  /**
+   * false: reachable by its link only, with noindex, and left out of every list, the sitemap and the
+   * receptionist's knowledge. Leave it out (or true) for a normal, listed demo.
+   */
+  listed?: boolean
   title: string
   category: DemoCategory
   icon: LucideIcon
@@ -76,7 +91,8 @@ function demoModule(load: () => Promise<{ default: ComponentType }>) {
   return { load, Component: lazy(load) }
 }
 
-export const DEMOS: DemoMeta[] = [
+/** Every demo with a page, listed or not. Pages, routing and the build use this. */
+export const ALL_DEMOS: DemoMeta[] = [
   {
     slug: 'ai-lead-chatbot',
     number: 1,
@@ -911,8 +927,70 @@ export const DEMOS: DemoMeta[] = [
     },
     ...demoModule(() => import('./clinic-pharmacy')),
   },
+  {
+    slug: 'wellness-consulting',
+    number: 0,
+    listed: LIST_WELLNESS_DEMO,
+    title: 'Wellness practice: AI assistant and booking',
+    category: 'Services & local markets',
+    icon: Leaf,
+    summary:
+      'A wellness practice’s own AI assistant on its website and WhatsApp: answers enquiries, captures leads, books consultations.',
+    intro:
+      'See how a wellness consulting practice with offices in Harare and Johannesburg handles enquiries, consultations and bookings: the website assistant, online booking, the same assistant on WhatsApp, and the owner’s view.',
+    highlights: [
+      'Answers enquiries as the practice, day and night',
+      'Books in-person or online consultations',
+      'WhatsApp confirmations and reminders',
+    ],
+    tryThis: [
+      'Ask the assistant how online consultations work',
+      'Book an online consultation and see the WhatsApp messages',
+      'Play the WhatsApp conversation, then open the Owner view',
+    ],
+    industries: ['Beauty & wellness'],
+    business: { name: 'Sable Leaf Wellness', location: 'Harare, Zimbabwe and Johannesburg, South Africa' },
+    build: {
+      timeline: '3 to 5 weeks',
+      intro:
+        'Your website, an assistant that knows your services and stays within them, online booking for both offices and online sessions, and the same assistant on your WhatsApp number.',
+      steps: [
+        {
+          when: 'Week 1',
+          title: 'Your services, offices and hours',
+          detail: 'We agree your services, prices, consultants, office hours and what the assistant may and may not say.',
+        },
+        {
+          when: 'Weeks 1 to 2',
+          title: 'Website and online booking',
+          detail: 'Your website goes up on a preview link, with booking for each office and online consultations.',
+        },
+        {
+          when: 'Weeks 2 to 3',
+          title: 'The assistant',
+          detail: 'It learns your services and answers enquiries in your tone, captures leads and hands over to you.',
+        },
+        {
+          when: 'Weeks 3 to 5',
+          title: 'WhatsApp and go-live',
+          detail: 'We connect your WhatsApp Business number, test the confirmations and reminders with you, and go live.',
+        },
+      ],
+      services: [
+        'Website design, development and redesign',
+        'AI chatbots and virtual assistants',
+        'Customer support and lead generation',
+        'API integrations and AI-powered systems',
+      ],
+    },
+    ...demoModule(() => import('./wellness-consulting')),
+  },
 ]
 
+/** The listed demos: the gallery, footer, "More demos", the demo count, the sitemap and the receptionist use these. */
+export const DEMOS: DemoMeta[] = ALL_DEMOS.filter((demo) => demo.listed !== false)
+
+/** Any demo with a page, listed or not. */
 export function findDemo(slug: string): DemoMeta | undefined {
-  return DEMOS.find((demo) => demo.slug === slug)
+  return ALL_DEMOS.find((demo) => demo.slug === slug)
 }
