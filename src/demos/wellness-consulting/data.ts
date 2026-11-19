@@ -1,10 +1,10 @@
 import { PRACTITIONERS, SERVICES, type PractitionerId, type ServiceId } from './business'
-import { addDays, bookingDays, hoursFor, practiceDay, scheduleWeekday, startOf } from './engine'
+import { addDays, bookingDays, hoursFor, practiceDay, startOf, weekday } from './engine'
 import type { Booking, BookingStatus, Lead, Source, WellnessState } from './types'
 
 /*
- * Sample bookings and enquiries, laid out around the demo's "now", so today always looks like a
- * normal working day. Invented clients with masked numbers. Each booking's office or online follows
+ * Sample bookings and enquiries, laid out on the practice's next open days from the demo's "now"
+ * (today, or Monday when today is a Sunday). Invented clients with masked numbers. Each booking's office or online follows
  * the consultant's real schedule for that day, so the seed obeys the same rules as new bookings.
  */
 
@@ -53,7 +53,7 @@ export function createInitialState(now: number): WellnessState {
     const day = days[dayIndex]
     const practitioner = PRACTITIONERS.find((p) => p.id === practitionerId)
     const service = SERVICES.find((s) => s.id === serviceId)
-    const weekdayIndex = scheduleWeekday(day, now)
+    const weekdayIndex = weekday(day)
     const mode = practitioner?.week[weekdayIndex]
     if (!practitioner || !service || !mode || !service.modes.includes(mode)) continue
     // Saturdays close at 13:00: sample bookings outside the day's hours are left out.

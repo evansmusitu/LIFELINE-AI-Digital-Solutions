@@ -31,7 +31,7 @@ export interface ScriptPlan {
 /** Picks the first afternoon online times from tomorrow on, from the live calendar. */
 export function planScript(bookings: Booking[], now: number, ref: string): ScriptPlan {
   const service = serviceById('consultation')
-  const days = bookingDays(now, 6).slice(1)
+  const days = bookingDays(now, 6).filter((day) => day > practiceDay(now))
   for (const afternoon of [true, false]) {
     for (const day of days) {
       const slots = slotsFor(service, 'online', 'any', day, bookings, now).filter((s) => !afternoon || s.minute >= 14 * 60)

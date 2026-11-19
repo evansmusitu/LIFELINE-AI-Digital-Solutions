@@ -64,7 +64,7 @@ export function savedAnswer(message: string): string {
     return `Our indicative prices: ${serviceList()}. ${NEXT}`
   }
   if (has(text, /\b(online|video|zoom|virtual|remote|from home|phone call)\b/)) {
-    return `${ONLINE.how} Online times are ${ONLINE.hoursText}, ${BUSINESS.timeLabel}. ${NEXT}`
+    return `${ONLINE.how} Online times are ${ONLINE.hoursText} (${BUSINESS.timeLabel}). ${NEXT}`
   }
   if (has(text, /\b(where|offices?|address|located|location|harare|johannesburg|joburg|jozi|hours|open|opening|closed?|saturday|sunday)\b/)) {
     return `We have two offices: ${officeList()}. Times are ${BUSINESS.timeLabel}. Online consultations are also available. ${NEXT}`

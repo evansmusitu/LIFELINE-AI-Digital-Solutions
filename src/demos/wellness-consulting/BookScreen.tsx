@@ -240,7 +240,7 @@ export function BookScreen({ business, draft, onDraft, bookings, now, confirmed,
                     selected ? 'border-(--accent) bg-(--accent) text-white' : 'border-slate-200 bg-white text-slate-800 enabled:hover:border-(--accent)',
                   )}
                 >
-                  <span className="font-semibold">{i === 0 ? 'Today' : dayLabel(d).split(' ')[0]}</span>
+                  <span className="font-semibold">{d === practiceDay(now) ? 'Today' : dayLabel(d).split(' ')[0]}</span>
                   <span className="text-xs">{dayLabel(d).split(' ').slice(1).join(' ')}</span>
                   <span className={cn('mt-0.5 text-[0.65rem]', selected ? 'text-white/90' : 'text-slate-600')}>{count ? `${count} free` : 'None free'}</span>
                 </button>

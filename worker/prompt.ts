@@ -160,7 +160,7 @@ export function wellnessPrompt(): string {
     '',
     `About ${name}:`,
     `- ${BUSINESS.descriptor}. All times are ${BUSINESS.timeLabel}.`,
-    ...OFFICES.map((o) => `- ${o.city} office, ${o.area}, ${o.country}: ${o.hoursText}. Closed on Sundays.`),
+    ...OFFICES.map((o) => `- ${o.city} office, ${o.area}, ${o.country}: ${o.hoursText}.`),
     `- Online consultations: ${ONLINE.hoursText}. ${ONLINE.how}`,
     `- In person: ${IN_PERSON_HOW}`,
     `- ${POLICIES.noMedical}`,

@@ -24,7 +24,10 @@ export const BUSINESS = {
 export type OfficeId = 'harare' | 'johannesburg'
 export type Mode = OfficeId | 'online'
 
-/** Hours as [open, close] in minutes after midnight, or null when closed. Index 0 is Sunday. */
+/**
+ * Hours as [open, close] in minutes after midnight, or null when closed. Index 0 is Sunday. Each
+ * `hoursText` must say the same (test/wellness.test.ts checks it).
+ */
 export type WeekHours = readonly ([number, number] | null)[]
 
 const at = (h: number, m = 0) => h * 60 + m
@@ -46,7 +49,7 @@ export const OFFICES: readonly Office[] = [
     country: 'Zimbabwe',
     area: 'Belgravia, Harare',
     hours: [null, [at(8, 30), at(17)], [at(8, 30), at(17)], [at(8, 30), at(17)], [at(8, 30), at(17)], [at(8, 30), at(17)], [at(9), at(13)]],
-    hoursText: 'Monday to Friday 08:30 to 17:00, Saturday 09:00 to 13:00',
+    hoursText: 'Monday to Friday 08:30 to 17:00, Saturday 09:00 to 13:00, closed on Sundays',
   },
   {
     id: 'johannesburg',
@@ -54,13 +57,13 @@ export const OFFICES: readonly Office[] = [
     country: 'South Africa',
     area: 'Rosebank, Johannesburg',
     hours: [null, [at(9), at(17, 30)], [at(9), at(17, 30)], [at(9), at(17, 30)], [at(9), at(17, 30)], [at(9), at(17, 30)], [at(9), at(13)]],
-    hoursText: 'Monday to Friday 09:00 to 17:30, Saturday 09:00 to 13:00',
+    hoursText: 'Monday to Friday 09:00 to 17:30, Saturday 09:00 to 13:00, closed on Sundays',
   },
 ]
 
 export const ONLINE = {
   hours: [null, [at(8), at(18)], [at(8), at(18)], [at(8), at(18)], [at(8), at(18)], [at(8), at(18)], [at(9), at(13)]] as WeekHours,
-  hoursText: 'Monday to Friday 08:00 to 18:00, Saturday 09:00 to 13:00',
+  hoursText: 'Monday to Friday 08:00 to 18:00, Saturday 09:00 to 13:00, closed on Sundays',
   how: 'Online consultations are private video calls. The link comes by WhatsApp or email with the booking confirmation, and works on a phone or laptop. A phone call is fine if the connection is weak.',
 }
 

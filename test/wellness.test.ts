@@ -2,13 +2,16 @@
 import { describe, expect, it } from 'vitest'
 import { ALL_DEMOS, DEMOS, LIST_WELLNESS_DEMO, findDemo } from '../src/demos/registry'
 import { EMERGENCY_ANSWER, savedAnswer, ASSISTANT_GREETING } from '../src/demos/wellness-consulting/assistant'
-import { BUSINESS, PRACTITIONERS, SERVICES, WELLNESS_SLUG } from '../src/demos/wellness-consulting/business'
+import { BUSINESS, OFFICES, ONLINE, PRACTITIONERS, SERVICES, WELLNESS_SLUG, type Mode } from '../src/demos/wellness-consulting/business'
 import { createInitialState } from '../src/demos/wellness-consulting/data'
 import {
   EMERGENCY_NOTE,
   addDays,
+  bookableServices,
   bookingDays,
   checkBooking,
+  hhmm,
+  isOpenDay,
   checkDetails,
   confirmationMessage,
   freeSlots,
@@ -105,10 +108,10 @@ describe('slot finding', () => {
     expect(slots).not.toContain(hm(12, 30))
   })
 
-  it('is closed on Sundays, except that the demo always treats today as open', () => {
+  it('is closed on Sundays, also when today is a Sunday', () => {
     expect(freeSlots(rutendo, consultation, 'harare', day(6), [], MON)).toEqual([])
     const sunday = startOf(day(6), hm(9, 30))
-    expect(freeSlots(rutendo, consultation, 'harare', day(6), [], sunday).length).toBeGreaterThan(0)
+    expect(freeSlots(rutendo, consultation, 'harare', day(6), [], sunday)).toEqual([])
   })
 
   it('keeps an hour’s notice and never offers passed times', () => {
@@ -133,6 +136,76 @@ describe('slot finding', () => {
     expect(merged.find((s) => s.minute === hm(11))?.practitionerIds).toEqual(['farai'])
     expect(slotsFor(serviceById('workplace'), 'online', 'any', monDay, [], MON)).toEqual([])
     expect(slotsFor(serviceById('discovery'), 'harare', 'any', monDay, [], MON)).toEqual([])
+  })
+})
+
+describe('opening hours and Sundays', () => {
+  const MODES: Mode[] = ['harare', 'johannesburg', 'online']
+  const SUNDAY_0930 = startOf(day(6), hm(9, 30))
+  const hoursTable = (mode: Mode) => (mode === 'online' ? ONLINE.hours : OFFICES.find((o) => o.id === mode)!.hours)
+  const hoursText = (mode: Mode) => (mode === 'online' ? ONLINE.hoursText : OFFICES.find((o) => o.id === mode)!.hoursText)
+  /** Every start time offered for any bookable service, by anyone, on a day (no notice period). */
+  const offered = (mode: Mode, d: number, now: number) =>
+    bookableServices(mode).flatMap((s) => slotsFor(s, mode, 'any', d, [], now, 0).map((slot) => ({ start: slot.minute, end: slot.minute + s.minutes })))
+
+  it.each(MODES)('offers no %s slot on a Sunday, whether today is Monday or the Sunday itself', (mode) => {
+    expect(offered(mode, day(6), MON)).toEqual([])
+    expect(offered(mode, day(6), SUNDAY_0930)).toEqual([])
+    expect(offered(mode, day(-1), startOf(day(-1), hm(9, 30)))).toEqual([])
+  })
+
+  it('starts the booking days on Monday when today is a Sunday, and the WhatsApp script books no Sunday', () => {
+    const days = bookingDays(SUNDAY_0930, 3)
+    expect(days).toEqual([day(7), day(8), day(9)])
+    expect(days.every(isOpenDay)).toBe(true)
+    const plan = planScript([], SUNDAY_0930, 'SL-1')
+    expect(new Date(practiceDay(plan.booking!.start)).getUTCDay()).not.toBe(0)
+  })
+
+  it.each(MODES)('says the same %s hours in words as the slots use', (mode) => {
+    const table = hoursTable(mode)
+    const span = (w: number) => `${hhmm(table[w]![0])} to ${hhmm(table[w]![1])}`
+    for (const w of [2, 3, 4, 5]) expect(table[w]).toEqual(table[1])
+    expect(table[0]).toBeNull()
+    expect(hoursText(mode)).toBe(`Monday to Friday ${span(1)}, Saturday ${span(6)}, closed on Sundays`)
+  })
+
+  it('tells the assistant the same hours, closed on Sundays, for both offices and online', () => {
+    const p = wellnessPrompt()
+    for (const mode of MODES) expect(p).toContain(hoursText(mode))
+    expect(p.match(/closed on Sundays/g)?.length).toBe(3)
+  })
+
+  it.each(MODES)('offers %s times only inside the stated hours, from opening, ending by closing time', (mode) => {
+    for (let n = 0; n < 6; n++) {
+      const d = day(n)
+      const w = new Date(d).getUTCDay()
+      const [open, close] = hoursTable(mode)[w]!
+      const slots = offered(mode, d, MON)
+      const working = PRACTITIONERS.some((p) => p.week[w] === mode)
+      if (!working) {
+        // Nobody works there that day (for example the Harare consultant is online on Wednesdays).
+        expect(slots).toEqual([])
+        continue
+      }
+      expect(slots.length).toBeGreaterThan(0)
+      expect(Math.min(...slots.map((s) => s.start))).toBe(open)
+      expect(Math.max(...slots.map((s) => s.end))).toBe(close)
+      for (const s of slots) {
+        expect(s.start).toBeGreaterThanOrEqual(open)
+        expect(s.end).toBeLessThanOrEqual(close)
+        // Lunch on weekdays only.
+        if (w !== 6) expect(s.start < hm(14) && s.end > hm(13)).toBe(false)
+      }
+    }
+  })
+
+  it('opens 09:00 to 13:00 on Saturdays, everywhere, with the last slot ending at 13:00', () => {
+    for (const mode of MODES) {
+      const slots = offered(mode, day(5), MON)
+      expect(Math.min(...slots.map((s) => s.start)), mode).toBe(hm(9))
+      expect(Math.max(...slots.map((s) => s.end)), mode).toBe(hm(13))
+    }
   })
 })
 

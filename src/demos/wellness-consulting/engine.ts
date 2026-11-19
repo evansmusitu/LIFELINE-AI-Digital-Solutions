@@ -74,23 +74,14 @@ export function dayWord(day: number, now: number): string {
   return dayLabel(day)
 }
 
-/**
- * The weekday whose schedule a day follows. The demo always treats today as a working day, so a
- * visit on a Sunday still has something to show: a Sunday today follows Monday's schedule.
- */
-export function scheduleWeekday(day: number, now: number): number {
-  const w = weekday(day)
-  return w === 0 && day === practiceDay(now) ? 1 : w
-}
+/** Both offices and online consultations are closed on Sundays, as the website and the assistant say. */
+export const isOpenDay = (day: number) => weekday(day) !== 0
 
-/** Today (always open in the demo), then the next days the practice is open. */
+/** The next `n` days the practice is open, starting today if it is open (on a Sunday, from Monday). */
 export function bookingDays(now: number, n = BOOKING_DAYS): number[] {
-  if (n <= 0) return []
-  const days = [practiceDay(now)]
-  let day = days[0]
-  while (days.length < n) {
-    day = addDays(day, 1)
-    if (weekday(day) !== 0) days.push(day)
+  const days: number[] = []
+  for (let day = practiceDay(now); days.length < n; day = addDays(day, 1)) {
+    if (isOpenDay(day)) days.push(day)
   }
   return days
 }
@@ -138,8 +129,8 @@ export function freeSlots(
   earliest = now,
 ): number[] {
   if (service.enquireOnly || !service.modes.includes(mode) || !practitioner.services.includes(service.id)) return []
-  const w = scheduleWeekday(day, now)
-  if (practitioner.week[w] !== mode) return []
+  const w = weekday(day)
+  if (!isOpenDay(day) || practitioner.week[w] !== mode) return []
   const hours = hoursFor(mode, w)
   if (!hours) return []
   const busy = busyMinutes(practitioner.id, day, bookings)

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { relativeTime } from '../../lib/format'
 import { AppButton, Badge, Notice, Panel, Segmented, Stat } from '../ui'
 import { BUSINESS, type Mode } from './business'
-import { addDays, dayLabel, dayWord, firstNameOf, hhmm, messageLog, practiceDay, practiceMinute, serviceById, timeLabel } from './engine'
+import { addDays, dayLabel, dayWord, firstNameOf, hhmm, isOpenDay, messageLog, practiceDay, practiceMinute, serviceById, timeLabel } from './engine'
 import { ModeBadge, SourceBadge } from './parts'
 import type { Booking, Lead, LeadStatus } from './types'
 
@@ -62,7 +62,13 @@ export function OwnerScreen({ bookings, leads, remindedAt, now, onContacted, onR
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.15fr_1fr]">
         <div className="space-y-4">
           <Panel title={`Today, ${dayLabel(today)}`} description={`${todays.length} booking${todays.length === 1 ? '' : 's'}`} bodyClassName="p-0!">
-            <BookingList bookings={todays} now={now} remindedAt={remindedAt} onRemind={onRemind} empty="No bookings today for this filter." />
+            <BookingList
+              bookings={todays}
+              now={now}
+              remindedAt={remindedAt}
+              onRemind={onRemind}
+              empty={isOpenDay(today) ? 'No bookings today for this filter.' : 'Closed today: both offices and online consultations are closed on Sundays.'}
+            />
           </Panel>
           <Panel title="Coming up" description="The next 7 days" bodyClassName="p-0!">
             {upcomingDays.length === 0 ? (
