@@ -189,11 +189,14 @@ limits and the same site-wide `AI_REPLIES_PER_DAY` cap, so the demo can't add to
   describing an emergency to emergency services or a doctor, decline anything unrelated to the practice, never ask for
   contact details in the chat, and name no outside companies, models or hosts. It runs at a lower temperature (0.3).
   Two checks don't depend on the AI at all: the chat shows a fixed emergency note when a message mentions an emergency
-  (`isEmergency` in `engine.ts`), and contact details go to the team through a form, never through the AI.
+  (`isEmergency` in `engine.ts`, which matches every example the prompt lists and common ways of saying them), and
+  contact details go to the team through a form, never through the AI.
 - **Saved answers.** When there is no AI reply, the chat answers from `src/demos/wellness-consulting/assistant.ts`
-  and labels it "Saved answer". Emergencies and health questions always get the same safe answers there too.
+  and labels it "Saved answer". Emergencies and health questions always get the same safe answers there too. For an
+  emergency, the saved answer is a short line pointing to the red emergency note above it, so the note isn't repeated.
 - **Tests.** `test/wellness.test.ts` checks the rules are in the prompt, that only that page gets the persona, that it
-  goes through the same limits and cap, and the saved answers.
+  goes through the same limits and cap, the saved answers, and the emergency note against a table of messages that
+  must and must not show it.
 
 ## Video calls
 
@@ -352,6 +355,22 @@ Its times are Harare and Johannesburg time (UTC+2) whatever the visitor's time z
 number and an optional email, never health information. The WhatsApp screen is scripted and says so; nothing is sent.
 Deposits appear only as an "optional later" note.
 
+- **Demo clock.** The demo runs on its own clock: 09:30 UTC+2 on today's date when the page opens, then in real time,
+  so there are times to book today whenever it is shown. The free times, the sample bookings, the owner view and the
+  WhatsApp messages all use it, and the screens label it "Demo time" (the header, the booking time step and the
+  owner view), never as the real local time. Opening the page again starts it at 09:30 again.
+- **Sundays.** Both offices and online consultations are closed on Sundays, as the website and the assistant say. On
+  a Sunday the booking page, the sample bookings and the WhatsApp conversation start on Monday, and the owner view
+  shows today as closed. The hours on the website, the booking page and in the assistant's facts come from the same
+  strings in `business.ts` as the slot hours.
+- **One wording.** The online video link "comes by WhatsApp an hour before the session", and the confirmation is sent
+  when the client books: the same words on the website, in the assistant's facts and in the WhatsApp messages. The
+  payment wording is shared too (`PAYMENT` in `business.ts`): free services need no payment, in-person sessions are
+  paid at the office, online ones after the WhatsApp confirmation message.
+- **No double bookings.** The Book screen checks a time again when it is confirmed, and the WhatsApp script checks its
+  planned time again just before it books (planning the next free time if it has gone). Booking references are
+  never reused.
+
 The SEO audit only checks its sample site. Its "Want a real audit of your own website?" panel sends the visitor's
 address to LIFELINE on WhatsApp.
 
@@ -379,7 +398,10 @@ but is left out of the gallery, the footer, "More demos", the demo count, `sitem
 knowledge. `DEMOS` holds the listed demos; `ALL_DEMOS` holds every demo with a page.
 
 The wellness consulting demo is unlisted by default. To list it, set `LIST_WELLNESS_DEMO = true` at the top of
-`src/demos/registry.ts` and merge. Nothing else needs changing: the tests follow the switch.
+`src/demos/registry.ts` and merge. Nothing else needs changing. The tests read the switch, so they pass either way:
+`test/wellness.test.ts` checks the gallery list, the demo count and the receptionist's knowledge, and
+`test/studio-pages.test.ts` runs the build's page step (`studioPages` in `vite.config.ts`) and checks the noindex tag,
+`sitemap.xml` and the knowledge file.
 
 ## Sample data rules
 

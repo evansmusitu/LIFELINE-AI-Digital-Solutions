@@ -85,7 +85,7 @@ async function loadContent() {
  * dist/demos/<slug>.html for each demo. Also writes sitemap.xml and robots.txt.
  * Unlisted demos get a page (with noindex) but stay out of the sitemap and the receptionist's knowledge.
  */
-function studioPages(): Plugin {
+export function studioPages(): Plugin {
   let content: ReturnType<typeof loadContent> | undefined
   const load = () => (content ??= loadContent())
 
