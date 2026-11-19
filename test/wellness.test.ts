@@ -328,6 +328,7 @@ describe('the wellness persona', () => {
       'Never ask about symptoms, conditions, medical history',
       'contact their local emergency services',
       'Do not talk about bookings or services in that reply',
+      'are not emergencies: do not tell them to call emergency services',
       'Politely decline anything else',
       'Never ask them to type a phone number',
       'Never take payments',
