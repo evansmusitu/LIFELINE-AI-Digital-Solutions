@@ -283,7 +283,7 @@ export function BookScreen({ business, draft, onDraft, bookings, now, confirmed,
             })
           )}
           <p className="text-xs text-slate-600">
-            {BUSINESS.timeLabel}. Bookable from an hour ahead.
+            {BUSINESS.timeLabel}. Bookable from an hour ahead. Demo time now: {timeLabel(now)}.
           </p>
           <AppButton variant="ghost" icon={ArrowLeft} onClick={() => update({ step: 2 })}>
             Back

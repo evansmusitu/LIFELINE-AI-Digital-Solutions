@@ -39,7 +39,11 @@ const PLAY_MS = 1300
 
 type ScreenId = 'website' | 'book' | 'whatsapp' | 'owner'
 
-/** The demo's clock: 09:30 practice time today when the page opens, then real time. */
+/**
+ * The demo's clock: 09:30 practice time (UTC+2) on today's date when the page opens, then it runs in
+ * real time. Slots, the sample bookings, the owner view and the messages all use it, and the screens
+ * label it "Demo time", so it is never shown as the real local time.
+ */
 function usePracticeClock(): () => number {
   const [offset] = useState(() => startOf(practiceDay(Date.now()), DEMO_START_MINUTE) - Date.now())
   return useCallback(() => Date.now() + offset, [offset])
@@ -220,8 +224,11 @@ export default function WellnessConsultingDemo() {
       active={screen}
       onChange={setScreen}
       headerRight={
-        <span className="hidden rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 sm:inline-flex">
-          {timeLabel(now)} Harare and Johannesburg time
+        <span
+          title="The demo's own clock: it starts at 09:30 when the page opens, so there are times to book today"
+          className="hidden rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 sm:inline-flex"
+        >
+          Demo time {timeLabel(now)}, UTC+2
         </span>
       }
     >

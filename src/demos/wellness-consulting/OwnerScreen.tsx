@@ -56,7 +56,9 @@ export function OwnerScreen({ bookings, leads, remindedAt, now, onContacted, onR
             { value: 'online', label: 'Online' },
           ]}
         />
-        <p className="text-xs text-slate-600">{BUSINESS.timeLabel}</p>
+        <p className="text-xs text-slate-600">
+          {BUSINESS.timeLabel} · Demo time now {timeLabel(now)}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.15fr_1fr]">
