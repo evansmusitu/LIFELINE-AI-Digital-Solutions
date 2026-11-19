@@ -341,11 +341,64 @@ export function messageLog(bookings: Booking[], now: number, manual: Record<stri
 /*
  * Safety net for the chat: words that suggest an emergency. When one appears, the chat shows a fixed
  * note pointing to emergency services before any reply, AI or saved, so it never depends on the AI.
+ * It covers every example in the assistant's instructions (worker/prompt.ts) and common ways of saying
+ * them. It leans towards showing the note: a stray note costs little, a missed one could cost a lot.
+ * Everyday words such as "breathing exercises" or "stress" don't match. Tested in test/wellness.test.ts.
  */
-const EMERGENCY =
-  /\b(emergenc\w*|chest pains?|heart attack|can'?t breathe|cannot breathe|not breathing|struggling to breathe|short(ness)? of breath|unconscious|passed out|collapsed?|faint(ed|ing)|seizures?|stroke|overdos\w*|poison\w*|bleeding (heavily|a lot|badly)|severe bleeding|suicid\w*|kill (myself|me)|end my life|self[- ]?harm|hurt(ing)? myself|ambulance)\b/i
+const PERSON = '(?:my|his|her|their|the|our)'
+const SELF = '(?:myself|himself|herself|themselves|ourselves)'
+const EMERGENCY_PATTERNS: RegExp[] = [
+  /\b(emergenc(y|ies)|ambulance|in danger)\b/,
+  // Chest pain and the heart.
+  /\bchest (pains?|tightness|is tight|hurts|is hurting)\b/,
+  new RegExp(`\\b(pain|tightness|pressure) in ${PERSON} chest\\b`),
+  /\bheart attack\b/,
+  // Breathing. "Breathing exercises" and "breathing techniques" don't match.
+  /\b(can'?t|cannot|can not|couldn'?t|could not|unable to|not|isn'?t|is not|stopped|struggling to|struggles? to|hard to|difficult to|trouble|difficulty|difficulties|problems?|struggling)( (in|with))? breath(e|es|ing)?\b/,
+  /\bbreathing (is |has )?(difficult|hard|laboured|labored|stopped|shallow)\b/,
+  /\b(short(ness)? of breath|breathless|gasping|choking|can'?t catch (my|his|her|their) breath)\b/,
+  // Bleeding.
+  /\b(heavy|heavily|severe|serious|bad|badly|lots of|a lot of|so much) bleeding\b/,
+  /\bbleed(ing|s)? (heavily|a lot|badly|lots|severely|so much|non ?stop|everywhere)\b/,
+  /\b(bleeding|blood) (won'?t|will not|doesn'?t|does not|isn'?t|is not) stop/,
+  /\bwon'?t stop bleeding\b/,
+  /\b(losing|lost) (a lot of|so much|lots of) blood\b/,
+  /\bha?emorrhag/,
+  // Fainting and collapse.
+  /\b(faint|fainted|fainting|faints|passed out|pass(es|ing)? out|blacked out|black(ing)? out|collapsed?|collapsing|unconscious|unresponsive|not responding|won'?t wake up)\b/,
+  // Signs of a stroke.
+  /\bstrokes?\b/,
+  /\b(face|mouth|smile) (is |has )?(drooping|droops|drooped|dropping|dropped|lopsided)\b/,
+  /\bdrooping (face|mouth|smile)\b/,
+  /\b(slurred|slurring)\b/,
+  /\b(can'?t|cannot|can not|unable to) (move|feel) (one|my|his|her|their|the)( (left|right))? (side|arm|leg|hand)\b/,
+  /\b(numb|numbness|weak|weakness|paralys\w*|paralyz\w*) (on |down )?(one|the left|the right|left|right) side\b/,
+  // Poisoning and overdose.
+  /\bpoison(ed|ing|s)?\b/,
+  /\b(swallowed|drank|drunk|ate) (some )?(bleach|rat poison|pesticide|paraffin|chemicals?|battery acid)\b/,
+  /\boverdos\w*/,
+  /\b(took|taken|swallowed|had) (way )?(too many|too much|all|a whole (box|bottle|pack|packet) of)( of)?( (my|his|her|their|the|these|those))? (pills|tablets|medicines?|medications?|meds|paracetamol|painkillers|sleeping pills|insulin)\b/,
+  // Suicide and self-harm.
+  /\bsuicid\w*/,
+  new RegExp(`\\bkill(ing)? (${SELF}|me)\\b`),
+  /\b(want|wanted|wanting|going|wanna|ready|planning) to die\b/,
+  /\b(want|wanted|wanting|going|wanna) to be dead\b/,
+  /\b(end|ending|take|taking) (my|his|her|their) (own )?life\b/,
+  /\b(don'?t|do not|no longer|doesn'?t|does not) want to (live|be alive|be here|go on)\b/,
+  /\b(no reason to live|better off dead)\b/,
+  /\bself[- ]?harm\w*/,
+  new RegExp(`\\b(hurt|hurting|harm|harming|cut|cutting|injure|injuring) ${SELF}\\b`),
+  // Seizures. "Fitting room", "a fitting time" and "get fit" don't match.
+  /\b(seizures?|convuls\w*|epileptic fit)\b/,
+  /\bfitting\b(?! (in|into|room|rooms|for|time|appointment|session|tribute|end))/,
+  /\b(having|had) (a )?fits?\b/,
+]
 
-export const isEmergency = (text: string) => EMERGENCY.test(text.replace(/[’]/g, "'"))
+/** True when a message suggests an emergency or danger: the chat then shows EMERGENCY_NOTE first. */
+export const isEmergency = (text: string) => {
+  const t = text.toLowerCase().replace(/[’‘`]/g, "'").replace(/\s+/g, ' ')
+  return EMERGENCY_PATTERNS.some((pattern) => pattern.test(t))
+}
 
 export const EMERGENCY_NOTE =
   'If this is an emergency or someone is in danger, contact your local emergency services or go to the nearest hospital emergency department now. This chat can’t help in an emergency.'

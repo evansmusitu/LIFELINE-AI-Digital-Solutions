@@ -1,5 +1,5 @@
 import { BUSINESS, OFFICES, ONLINE, POLICIES, SERVICES, priceLabel } from './business'
-import { EMERGENCY_NOTE, isEmergency } from './engine'
+import { isEmergency } from './engine'
 
 /*
  * The sample practice's own website assistant: its greeting, suggested questions and saved answers.
@@ -27,11 +27,18 @@ const officeList = () => OFFICES.map((o) => `${o.area} (${o.hoursText})`).join('
 
 const NEXT = 'Tap “Book online” to see free times, or “Leave my details” and the team will contact you.'
 
-/** A saved answer to the visitor's message. Health questions always get the same safe answer. */
+/**
+ * The saved answer to a message that suggests an emergency. The chat has already shown the red
+ * emergency note (EMERGENCY_NOTE, from the same isEmergency check), so this is a short follow-on line
+ * that points back to it instead of repeating it.
+ */
+export const EMERGENCY_ANSWER = 'Please get help first, as the red note above says. When you’re safe, the team will gladly help with anything else.'
+
+/** A saved answer to the visitor's message. Emergencies and health questions always get the same safe answers. */
 export function savedAnswer(message: string): string {
   const text = message.toLowerCase().replace(/[’']/g, "'")
 
-  if (isEmergency(text)) return `${EMERGENCY_NOTE} When you’re safe, the team will gladly help with anything else.`
+  if (isEmergency(text)) return EMERGENCY_ANSWER
 
   if (
     has(

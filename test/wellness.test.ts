@@ -1,7 +1,7 @@
 /* The wellness consulting demo: slots, booking checks, messages, saved answers, the persona and its guardrails. */
 import { describe, expect, it } from 'vitest'
 import { ALL_DEMOS, DEMOS, LIST_WELLNESS_DEMO, findDemo } from '../src/demos/registry'
-import { savedAnswer, ASSISTANT_GREETING } from '../src/demos/wellness-consulting/assistant'
+import { EMERGENCY_ANSWER, savedAnswer, ASSISTANT_GREETING } from '../src/demos/wellness-consulting/assistant'
 import { BUSINESS, PRACTITIONERS, SERVICES, WELLNESS_SLUG } from '../src/demos/wellness-consulting/business'
 import { createInitialState } from '../src/demos/wellness-consulting/data'
 import {
@@ -275,13 +275,120 @@ describe('sample data', () => {
   })
 })
 
+/** Messages that must show the fixed emergency note: every example in the prompt, and common phrasings. */
+const EMERGENCIES = [
+  // Chest pain
+  'My husband has chest pain and can’t breathe',
+  'I have chest pains',
+  'there is a pain in my chest',
+  'I think he is having a heart attack',
+  // Breathing
+  'I have trouble breathing',
+  'difficulty breathing since this morning',
+  'She has difficulty in breathing',
+  'I can’t breathe',
+  "I cant breathe properly",
+  'I cannot breathe',
+  'my baby is not breathing',
+  'it is hard to breathe',
+  'I’m struggling to breathe',
+  'shortness of breath and dizzy',
+  // Bleeding
+  'heavy bleeding after a fall',
+  'He is bleeding a lot',
+  'she is bleeding heavily',
+  'the bleeding won’t stop',
+  // Fainting and collapse
+  'I feel faint',
+  'my mum is fainting',
+  'he fainted at work',
+  'she passed out',
+  'my dad collapsed in the kitchen',
+  'he is unconscious',
+  // Stroke
+  'I think she is having a stroke',
+  'his face is drooping on one side',
+  'slurred speech and confusion',
+  'she can’t move one side of her body',
+  'he can’t move his left arm',
+  // Poisoning and overdose
+  'my child swallowed bleach',
+  'I think it is food poisoning, he is vomiting',
+  'my son drank poison',
+  'is this an overdose?',
+  'she took too many pills',
+  'I have taken too many tablets',
+  // Suicide and self-harm
+  'I am thinking about suicide',
+  'I feel suicidal',
+  'I want to kill myself',
+  'I want to die',
+  'I want to end my life',
+  'I don’t want to live any more',
+  'I keep wanting to self-harm',
+  'I self harm',
+  'I want to hurt myself',
+  // Seizures
+  'my son is having a seizure',
+  'she is fitting and won’t stop',
+  'he had a fit',
+  // Emergencies in general
+  'This is an emergency',
+  'please call an ambulance',
+]
+
+/** Everyday messages that must not show the emergency note. */
+const NOT_EMERGENCIES = [
+  'How much is a consultation?',
+  'Do you do online sessions?',
+  'Do you teach breathing exercises?',
+  'Can a consultant help with breathing techniques for stress?',
+  'I have a lot of stress at work',
+  'I get headaches and feel tired',
+  'My blood pressure is a bit high, can I still book?',
+  'I want to get fit and sleep better',
+  'Is there a fitting room at the office?',
+  'Is Saturday a fitting time for a first visit?',
+  'How long does it take? I don’t want to take too much time off work',
+  'I had too much coffee today',
+  'Do you help with diabetes?',
+  'I would love a session on healthy eating',
+  'Where is the Harare office?',
+  'Can I talk to a person?',
+]
+
+describe('the emergency note', () => {
+  it.each(EMERGENCIES)('shows for “%s”', (message) => {
+    expect(isEmergency(message)).toBe(true)
+  })
+
+  it.each(NOT_EMERGENCIES)('doesn’t show for “%s”', (message) => {
+    expect(isEmergency(message)).toBe(false)
+  })
+
+  it('covers every example the prompt lists', () => {
+    const rule = wellnessPrompt().split('\n').find((l) => l.includes('describes an emergency')) ?? ''
+    const examples = /for example ([^)]+)\)/.exec(rule)?.[1] ?? ''
+    expect(examples).toBe('chest pain, trouble breathing, heavy bleeding, fainting, signs of a stroke, poisoning or an overdose, or thoughts of suicide or self-harm')
+    for (const phrase of ['chest pain', 'trouble breathing', 'heavy bleeding', 'fainting', 'stroke', 'poisoning', 'overdose', 'suicide', 'self-harm']) {
+      expect(isEmergency(phrase), phrase).toBe(true)
+    }
+  })
+})
+
 describe('saved answers (when there is no AI reply)', () => {
-  it('puts emergencies first', () => {
-    expect(isEmergency('My husband has chest pain and can’t breathe')).toBe(true)
-    expect(isEmergency('I want to end my life')).toBe(true)
-    expect(isEmergency('How much is a consultation?')).toBe(false)
-    expect(isEmergency('Do you do online sessions?')).toBe(false)
-    expect(savedAnswer('chest pain, what should I take?').startsWith(EMERGENCY_NOTE)).toBe(true)
+  it.each(EMERGENCIES)('answers “%s” with the emergency answer, not the off-topic one', (message) => {
+    expect(savedAnswer(message)).toBe(EMERGENCY_ANSWER)
+  })
+
+  it('doesn’t repeat the red note’s sentence: the saved answer is short and different', () => {
+    expect(EMERGENCY_ANSWER).not.toContain(EMERGENCY_NOTE)
+    expect(EMERGENCY_ANSWER).not.toMatch(/emergency services|hospital/)
+    expect(EMERGENCY_ANSWER.length).toBeLessThan(EMERGENCY_NOTE.length)
+  })
+
+  it('gives everyday messages their usual answers', () => {
+    for (const message of NOT_EMERGENCIES) expect(savedAnswer(message)).not.toBe(EMERGENCY_ANSWER)
   })
 
   it('never gives health advice', () => {
