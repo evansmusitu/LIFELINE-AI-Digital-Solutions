@@ -329,7 +329,7 @@ published with the site. The prices in it are numbers to test, not market facts.
 
 ## Demos
 
-Batches 1 to 3 of 5 (numbers refer to the brief's list of 25), plus one unlisted demo:
+Batches 1 to 3 of 5 (numbers refer to the brief's list of 25), plus the wellness consulting demo:
 
 | # | Demo | Sample business | Screens |
 |---|---|---|---|
@@ -397,8 +397,8 @@ A demo with `listed: false` has a working page and its own HTML file, with `<met
 but is left out of the gallery, the footer, "More demos", the demo count, `sitemap.xml` and the receptionist's
 knowledge. `DEMOS` holds the listed demos; `ALL_DEMOS` holds every demo with a page.
 
-The wellness consulting demo is unlisted by default. To list it, set `LIST_WELLNESS_DEMO = true` at the top of
-`src/demos/registry.ts` and merge. Nothing else needs changing. The tests read the switch, so they pass either way:
+The wellness consulting demo is listed (`LIST_WELLNESS_DEMO = true` at the top of `src/demos/registry.ts`). To
+unlist it again, set it to `false` and merge. Nothing else needs changing. The tests read the switch, so they pass either way:
 `test/wellness.test.ts` checks the gallery list, the demo count and the receptionist's knowledge, and
 `test/studio-pages.test.ts` runs the build's page step (`studioPages` in `vite.config.ts`) and checks the noindex tag,
 `sitemap.xml` and the knowledge file.

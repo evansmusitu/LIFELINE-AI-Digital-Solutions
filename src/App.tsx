@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SiteFooter } from './components/SiteFooter'
 import { SiteHeader } from './components/SiteHeader'
 import { ToastProvider } from './components/ToastProvider'
@@ -7,7 +7,7 @@ import { parseRoute, scrollToSection, useLocation } from './lib/router'
 import { DemoPage } from './pages/DemoPage'
 import { HomePage } from './pages/HomePage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import { receptionistPage } from './receptionist/protocol'
+import { nextReceptionistPage, receptionistPage } from './receptionist/protocol'
 import { ReceptionistProvider } from './receptionist/ReceptionistProvider'
 
 const STUDIO_TITLE = 'LIFELINE AI CONCIERGE | Demo Studio'
@@ -17,6 +17,10 @@ export default function App() {
   const route = parseRoute(here)
   const demo = route.name === 'demo' ? findDemo(route.slug) : undefined
   const firstLoad = useRef(true)
+  // The page Tari is told about. Updated while rendering (React's pattern for state that follows a prop).
+  const [tariPage, setTariPage] = useState(() => receptionistPage(demo?.slug))
+  const nextTariPage = nextReceptionistPage(tariPage, demo?.slug)
+  if (nextTariPage !== tariPage) setTariPage(nextTariPage)
 
   // Runs on every navigation, including a repeat click on the same link: page title, scroll position and focus.
   useEffect(() => {
@@ -54,7 +58,7 @@ export default function App() {
   return (
     <ToastProvider>
       {/* The AI receptionist knows which demo is on screen (except a demo with its own assistant). */}
-      <ReceptionistProvider page={receptionistPage(demo?.slug)}>
+      <ReceptionistProvider page={tariPage}>
         <a
           href="#main"
           onClick={(event) => {
