@@ -11,6 +11,17 @@ export function moneyWhole(amount: number): string {
   return usdWhole.format(amount)
 }
 
+/**
+ * Zimbabwe gold (ZiG) at a sample rate, for demos set in Zimbabwe, where prices are quoted in USD and
+ * ZiG. Always shown with a note that it is a sample rate. The events demo keeps its own copy.
+ */
+export const ZIG_SAMPLE_RATE = 26.8
+
+/** "ZiG 16,616" at the sample rate, rounded to whole ZiG. */
+export function zigWhole(usd: number): string {
+  return `ZiG ${Math.round(usd * ZIG_SAMPLE_RATE).toLocaleString('en-GB')}`
+}
+
 export function num(value: number): string {
   return plain.format(value)
 }

@@ -720,7 +720,8 @@ describe('listing', () => {
     expect(findDemo('wellness-consulting')?.business.name).toBe(BUSINESS.name)
     expect(ALL_DEMOS.some((d) => d.slug === 'wellness-consulting')).toBe(true)
     expect(DEMOS.some((d) => d.slug === 'wellness-consulting')).toBe(LIST_WELLNESS_DEMO)
-    expect(DEMOS.length).toBe(ALL_DEMOS.length - (LIST_WELLNESS_DEMO ? 0 : 1))
+    expect(DEMOS.length).toBe(ALL_DEMOS.filter((d) => d.listed !== false).length)
+    expect(DEMOS.length).toBe(ALL_DEMOS.length - ALL_DEMOS.filter((d) => d.listed === false).length)
     expect(toKnowledge(DEMOS).demos.some((d) => d.slug === 'wellness-consulting')).toBe(LIST_WELLNESS_DEMO)
   })
 

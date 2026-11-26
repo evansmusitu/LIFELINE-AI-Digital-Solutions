@@ -1,7 +1,7 @@
 import { LIMITS, type ChatTurn, type NoReply, type ReceptionistRequest } from '../src/receptionist/protocol'
 import { BASE_HEADERS, isRecord, json, loadKnowledge, pageName, readBody, rejectRequest, requestNetwork, visitorId } from './http'
 import type { ChatLimiter } from './limiter'
-import { personaFor, systemPrompt, wellnessPrompt } from './prompt'
+import { personaFor, schoolPrompt, systemPrompt, wellnessPrompt } from './prompt'
 import type { Count } from './stats'
 import { replyStream } from './stream'
 
@@ -148,11 +148,13 @@ export async function handleReceptionist(
   }
   if (chat.first) count('chat_started')
 
-  // Tari everywhere, except the wellness demo's own chat (worker/prompt.ts). Same limits and daily cap for both.
+  // Tari everywhere, except the wellness and school demos' own chats (worker/prompt.ts). Same limits and daily cap for all.
   const persona = personaFor(chat.page)
   let system: string
   if (persona === 'wellness') {
     system = wellnessPrompt()
+  } else if (persona === 'school') {
+    system = schoolPrompt()
   } else {
     const knowledge = await loadKnowledge(env, url.origin)
     const page = knowledge.demos.some((d) => d.slug === chat.page) ? chat.page : 'home'
@@ -169,8 +171,8 @@ export async function handleReceptionist(
       messages: [{ role: 'system', content: system }, ...chat.messages],
       stream: true,
       max_tokens: MAX_REPLY_TOKENS,
-      // The wellness assistant runs cooler, so it keeps closer to its health and safety rules.
-      temperature: persona === 'wellness' ? 0.3 : 0.5,
+      // The demos' own assistants run cooler, so they keep closer to their safety rules and facts.
+      temperature: persona === 'tari' ? 0.5 : 0.3,
       ...MODELS[model],
     })
   } catch (error) {

@@ -14,12 +14,20 @@ export const KNOWLEDGE_PATH = '/receptionist-knowledge.json'
  */
 export const WELLNESS_PAGE = 'wellness-consulting'
 
+/** The school admissions demo. Its own website chat is answered as that sample school's assistant. */
+export const SCHOOL_PAGE = 'school-admissions'
+
+/** Demos with their own assistant. Tari never sends these pages. */
+export const OWN_ASSISTANT_PAGES: readonly string[] = [WELLNESS_PAGE, SCHOOL_PAGE]
+
+const hasOwnAssistant = (slug: string | undefined) => !!slug && OWN_ASSISTANT_PAGES.includes(slug)
+
 /**
  * The page Tari's chat and video calls are told about: the demo on screen, or "home". On a demo with
  * its own assistant it is "home", so Tari's requests can never be answered by that assistant.
  */
 export function receptionistPage(slug: string | undefined): string {
-  return slug && slug !== WELLNESS_PAGE ? slug : 'home'
+  return slug && !hasOwnAssistant(slug) ? slug : 'home'
 }
 
 /**
@@ -27,7 +35,7 @@ export function receptionistPage(slug: string | undefined): string {
  * chat doesn't say "You're back on the home page" there. Opened straight on that demo, Tari starts on "home".
  */
 export function nextReceptionistPage(previous: string, slug: string | undefined): string {
-  return slug === WELLNESS_PAGE ? previous : receptionistPage(slug)
+  return hasOwnAssistant(slug) ? previous : receptionistPage(slug)
 }
 
 export const LIMITS = {
