@@ -3,23 +3,29 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, runnerImport, type Plugin } from 'vite'
 import { KNOWLEDGE_PATH, toKnowledge } from './src/receptionist/protocol.ts'
+import {
+  PRERENDER_CSS,
+  demoHtml,
+  demoJsonLd,
+  homeHtml,
+  homeJsonLd,
+  llmsTxt,
+  solutionHtml,
+  solutionJsonLd,
+  type SeoContent,
+  type SeoDemo,
+  type SeoSite,
+  type SeoSolution,
+} from './scripts/seo/prerender.ts'
 
 /** The fields this file reads from src/config/site.ts and src/demos/registry.ts. */
-interface SiteInfo {
-  url: string
-  brand: string
-  description: string
+interface SiteInfo extends SeoSite {
   previewDescription: string
 }
 
-interface DemoInfo {
-  slug: string
+interface DemoInfo extends SeoDemo {
   /** false: an unlisted demo (see LIST_WELLNESS_DEMO in src/demos/registry.ts). */
   listed?: boolean
-  title: string
-  summary: string
-  industries: string[]
-  build: { timeline: string; services: string[] }
 }
 
 interface PageMeta {
@@ -50,9 +56,12 @@ function metaTags(page: PageMeta): string {
   ].join('\n    ')
 }
 
+/** The home page's tab and search-result title. The same words as STUDIO_TITLE in src/App.tsx. */
+export const HOME_TITLE = 'LIFELINE AI CONCIERGE | AI chatbots, WhatsApp automation and business systems in Zimbabwe'
+
 function homeMeta(site: SiteInfo): PageMeta {
   return {
-    title: `${site.brand} | Demo Studio`,
+    title: HOME_TITLE,
     description: site.description,
     previewDescription: site.previewDescription,
     url: `${site.url}/`,
@@ -63,26 +72,60 @@ function demoMeta(site: SiteInfo, demo: DemoInfo): PageMeta {
   return {
     // Same as the browser tab title set in src/App.tsx.
     title: `${demo.title} demo | ${site.brand}`,
-    description: demo.summary,
+    description: `${demo.summary} Free live demo by ${site.brand}, Zimbabwe.`,
     previewDescription: demo.summary,
     url: `${site.url}/demos/${demo.slug}`,
     noindex: demo.listed === false,
   }
 }
 
+function solutionMeta(site: SiteInfo, solution: SeoSolution): PageMeta {
+  return {
+    title: solution.metaTitle,
+    description: solution.description,
+    previewDescription: solution.description,
+    url: `${site.url}/solutions/${solution.slug}`,
+  }
+}
+
 async function loadContent() {
   const options = { configFile: false, logLevel: 'silent' } as const
-  const [site, registry] = await Promise.all([
-    runnerImport<{ SITE: SiteInfo }>('./src/config/site.ts', options),
+  const [site, registry, about, solutions] = await Promise.all([
+    runnerImport<{ SITE: SiteInfo; SERVICES: readonly string[] }>('./src/config/site.ts', options),
     runnerImport<{ ALL_DEMOS: DemoInfo[] }>('./src/demos/registry.ts', options),
+    runnerImport<{ ABOUT: { summary: string; view: string } }>('./src/config/about.ts', options),
+    runnerImport<{ SOLUTIONS: readonly SeoSolution[] }>('./src/config/solutions.ts', options),
   ])
-  return { site: site.module.SITE, demos: registry.module.ALL_DEMOS }
+  const demos = registry.module.ALL_DEMOS
+  const seo: SeoContent = {
+    site: site.module.SITE,
+    about: about.module.ABOUT,
+    services: site.module.SERVICES,
+    demos: demos.filter((d) => d.listed !== false),
+    solutions: solutions.module.SOLUTIONS,
+  }
+  return { site: site.module.SITE, demos, seo }
+}
+
+/** The parts of a page that differ: meta tags, structured data and the pre-rendered body. */
+interface PageParts {
+  meta: string
+  jsonLd: string
+  body: string
+}
+
+function fill(html: string, parts: PageParts): string {
+  return html
+    .replace('<!-- page-meta -->', () => parts.meta)
+    .replace('<!-- page-jsonld -->', () => `${parts.jsonLd}\n    <style>${PRERENDER_CSS}</style>`)
+    .replace('<!-- page-body -->', () => parts.body)
 }
 
 /**
  * Gives every page its own HTML file, so link previews and search engines (which don't run
  * JavaScript) see the right title and description: dist/index.html for the home page and
- * dist/demos/<slug>.html for each demo. Also writes sitemap.xml and robots.txt.
+ * dist/demos/<slug>.html for each demo and dist/solutions/<slug>.html for each solution, each with its own
+ * readable content and structured data. Also writes sitemap.xml, robots.txt and llms.txt.
  * Unlisted demos get a page (with noindex) but stay out of the sitemap and the receptionist's knowledge.
  */
 export function studioPages(): Plugin {
@@ -96,31 +139,43 @@ export function studioPages(): Plugin {
     transformIndexHtml: {
       order: 'pre',
       async handler(html) {
-        const { site } = await load()
-        return html.replace('<!-- page-meta -->', () => metaTags(homeMeta(site))).replaceAll('%SITE_URL%', site.url)
+        const { site, seo } = await load()
+        const parts = { meta: metaTags(homeMeta(site)), jsonLd: homeJsonLd(seo), body: homeHtml(seo) }
+        return fill(html, parts).replaceAll('%SITE_URL%', site.url)
       },
     },
     async generateBundle(_options, bundle) {
       const index = bundle['index.html']
       if (index?.type !== 'asset' || typeof index.source !== 'string') this.error('index.html is missing from the build')
-      const { site, demos } = await load()
-      const home = metaTags(homeMeta(site))
-      if (!index.source.includes(home)) this.error('The page-meta marker is missing from index.html')
+      const source = index.source
+      const { site, demos, seo } = await load()
+      const home = { meta: metaTags(homeMeta(site)), jsonLd: homeJsonLd(seo), body: homeHtml(seo) }
+      for (const part of Object.values(home)) if (!source.includes(part)) this.error('A page marker is missing from index.html')
+      const pageFrom = (parts: PageParts) =>
+        source.replace(home.meta, () => parts.meta).replace(home.jsonLd, () => parts.jsonLd).replace(home.body, () => parts.body)
 
       for (const demo of demos) {
-        const page = metaTags(demoMeta(site, demo))
-        this.emitFile({ type: 'asset', fileName: `demos/${demo.slug}.html`, source: index.source.replace(home, () => page) })
+        // Unlisted demos keep a bare page: no content or structured data for search engines.
+        const listedDemo = demo.listed !== false
+        const parts = { meta: metaTags(demoMeta(site, demo)), jsonLd: listedDemo ? demoJsonLd(seo, demo) : '', body: listedDemo ? demoHtml(seo, demo) : '' }
+        this.emitFile({ type: 'asset', fileName: `demos/${demo.slug}.html`, source: pageFrom(parts) })
       }
+      for (const solution of seo.solutions) {
+        const parts = { meta: metaTags(solutionMeta(site, solution)), jsonLd: solutionJsonLd(seo, solution), body: solutionHtml(seo, solution) }
+        this.emitFile({ type: 'asset', fileName: `solutions/${solution.slug}.html`, source: pageFrom(parts) })
+      }
+      this.emitFile({ type: 'asset', fileName: 'llms.txt', source: llmsTxt(seo) })
 
       const listed = demos.filter((demo) => demo.listed !== false)
-      const urls = [homeMeta(site).url, ...listed.map((demo) => demoMeta(site, demo).url)]
+      const urls = [homeMeta(site).url, ...seo.solutions.map((s) => solutionMeta(site, s).url), ...listed.map((demo) => demoMeta(site, demo).url)]
+      const lastmod = new Date().toISOString().slice(0, 10)
       this.emitFile({
         type: 'asset',
         fileName: 'sitemap.xml',
         source: [
           '<?xml version="1.0" encoding="UTF-8"?>',
           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-          ...urls.map((url) => `  <url><loc>${escapeHtml(url)}</loc></url>`),
+          ...urls.map((url) => `  <url><loc>${escapeHtml(url)}</loc><lastmod>${lastmod}</lastmod></url>`),
           '</urlset>',
           '',
         ].join('\n'),

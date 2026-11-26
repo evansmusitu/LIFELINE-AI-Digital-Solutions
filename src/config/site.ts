@@ -5,7 +5,7 @@ export const SITE = {
   brand: 'LIFELINE AI CONCIERGE',
   /** The home page's search-result description. Each demo page uses its card summary instead. */
   description:
-    'Talk to Tari, our AI receptionist, by chat or video call, and try live demos of the AI chatbots, workflow automation, WhatsApp ordering and business systems LIFELINE AI CONCIERGE builds.',
+    'AI chatbots, WhatsApp ordering, booking, school and business systems, built in Harare, Zimbabwe. Talk to Tari, our AI receptionist, and try live demos free.',
   /** The text under the home page's link preview on WhatsApp, Facebook, LinkedIn and X. Goes with public/og-image.jpg. */
   previewDescription:
     'Talk to Tari, our AI receptionist, by chat or face-to-face video call. Then try live demos of what AI and automation can do for your business. Free, no sign-up.',

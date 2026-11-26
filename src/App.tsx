@@ -7,10 +7,13 @@ import { parseRoute, scrollToSection, useLocation } from './lib/router'
 import { DemoPage } from './pages/DemoPage'
 import { HomePage } from './pages/HomePage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { SolutionPage } from './pages/SolutionPage'
+import { findSolution } from './config/solutions'
 import { nextReceptionistPage, receptionistPage } from './receptionist/protocol'
 import { ReceptionistProvider } from './receptionist/ReceptionistProvider'
 
-const STUDIO_TITLE = 'LIFELINE AI CONCIERGE | Demo Studio'
+/** The same words as HOME_TITLE in vite.config.ts. */
+const STUDIO_TITLE = 'LIFELINE AI CONCIERGE | AI chatbots, WhatsApp automation and business systems in Zimbabwe'
 
 export default function App() {
   const here = useLocation()
@@ -26,7 +29,8 @@ export default function App() {
   useEffect(() => {
     const current = parseRoute(here)
     const currentDemo = current.name === 'demo' ? findDemo(current.slug) : undefined
-    document.title = currentDemo ? `${currentDemo.title} demo | LIFELINE AI CONCIERGE` : STUDIO_TITLE
+    const currentSolution = current.name === 'solution' ? findSolution(current.slug) : undefined
+    document.title = currentDemo ? `${currentDemo.title} demo | LIFELINE AI CONCIERGE` : currentSolution ? currentSolution.metaTitle : STUDIO_TITLE
 
     const initial = firstLoad.current
     firstLoad.current = false
@@ -74,6 +78,7 @@ export default function App() {
           <main id="main" tabIndex={-1} className="flex-1 outline-none">
             {route.name === 'home' && <HomePage />}
             {route.name === 'demo' && (demo ? <DemoPage key={demo.slug} demo={demo} /> : <NotFoundPage />)}
+            {route.name === 'solution' && (findSolution(route.slug) ? <SolutionPage key={route.slug} solution={findSolution(route.slug)!} /> : <NotFoundPage />)}
             {route.name === 'not-found' && <NotFoundPage />}
           </main>
           <SiteFooter />

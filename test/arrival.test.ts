@@ -129,3 +129,24 @@ describe('byEvent', () => {
     expect(isPageEvent('by_team-a')).toBe(false)
   })
 })
+
+describe('where a visit came from', () => {
+  it('sends only the kind of site, never the address', async () => {
+    const { sourceEvent } = await import('../src/lib/count-events')
+    const own = 'lifeline.mftintelligence.com'
+    expect(sourceEvent('', own)).toBe('from_direct')
+    expect(sourceEvent('https://lifeline.mftintelligence.com/demos/x', own)).toBe('from_direct')
+    expect(sourceEvent('https://www.google.com/', own)).toBe('from_search')
+    expect(sourceEvent('https://www.google.co.zw/', own)).toBe('from_search')
+    expect(sourceEvent('https://www.bing.com/search?q=x', own)).toBe('from_search')
+    expect(sourceEvent('https://gemini.google.com/app', own)).toBe('from_ai')
+    expect(sourceEvent('https://chatgpt.com/', own)).toBe('from_ai')
+    expect(sourceEvent('https://www.perplexity.ai/', own)).toBe('from_ai')
+    expect(sourceEvent('https://l.facebook.com/l.php', own)).toBe('from_social')
+    expect(sourceEvent('https://www.tiktok.com/', own)).toBe('from_social')
+    expect(sourceEvent('https://t.co/abc', own)).toBe('from_social')
+    expect(sourceEvent('https://mftintelligence.com/', own)).toBe('from_other_site')
+    expect(sourceEvent('not a url', own)).toBe('from_direct')
+    expect(sourceEvent('https://evilgoogle.com/', own)).toBe('from_other_site')
+  })
+})

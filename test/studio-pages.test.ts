@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { studioPages } from '../vite.config'
 import { ALL_DEMOS, LIST_FEES_DEMO, LIST_SCHOOL_DEMO, LIST_TEACHER_DEMO, LIST_WELLNESS_DEMO } from '../src/demos/registry'
 import { KNOWLEDGE_PATH } from '../src/receptionist/protocol'
+import { SOLUTIONS } from '../src/config/solutions'
 
 type Hook = { handler?: (...args: unknown[]) => unknown } | ((...args: unknown[]) => unknown)
 const call = (hook: unknown, self: unknown, ...args: unknown[]) => {
@@ -22,8 +23,9 @@ async function build(): Promise<Record<string, string>> {
       throw new Error(message)
     },
   }
-  const html = (await call(plugin.transformIndexHtml, context, '<html><head><!-- page-meta --></head><body></body></html>')) as string
+  const html = (await call(plugin.transformIndexHtml, context, '<html><head><!-- page-meta --><!-- page-jsonld --></head><body><div id="root"><!-- page-body --></div></body></html>')) as string
   await call(plugin.generateBundle, context, {}, { 'index.html': { type: 'asset', source: html } })
+  files['index.html'] = html
   return files
 }
 
@@ -70,5 +72,27 @@ describe('the built pages, sitemap and knowledge', () => {
       expect(files['sitemap.xml'], demo.slug).toContain(`/demos/${demo.slug}<`)
       expect(files[`demos/${demo.slug}.html`], demo.slug).not.toContain('noindex')
     }
+  })
+
+  it('give every listed page readable content, valid structured data and a place in the sitemap', async () => {
+    const files = await build()
+    const words = (html: string) => html.replace(/<script.*?<\/script>|<style.*?<\/style>/gs, '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length
+    const pages = ['index.html', ...SOLUTIONS.map((s) => `solutions/${s.slug}.html`), ...ALL_DEMOS.filter((d) => d.listed !== false).map((d) => `demos/${d.slug}.html`)]
+    for (const name of pages) {
+      const html = files[name]
+      expect(html, name).toBeDefined()
+      expect(words(html), name).toBeGreaterThan(150)
+      const data = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map((m) => JSON.parse(m[1]))
+      expect(data.length, name).toBe(1)
+      expect(JSON.stringify(data), name).toContain('"Harare"')
+      expect(html, name).not.toMatch(/cloudflare|napster|github/i)
+    }
+    for (const s of SOLUTIONS) {
+      expect(files['sitemap.xml']).toContain(`/solutions/${s.slug}<`)
+      expect(files[`solutions/${s.slug}.html`]).toContain('"FAQPage"')
+      for (const slug of s.demos) expect(ALL_DEMOS.some((d) => d.slug === slug), `${s.slug} → ${slug}`).toBe(true)
+    }
+    expect(files['llms.txt']).toContain('# LIFELINE AI CONCIERGE')
+    expect(files['llms.txt']).toContain('/solutions/school-software-zimbabwe')
   })
 })

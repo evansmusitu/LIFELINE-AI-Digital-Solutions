@@ -1,4 +1,5 @@
 import { SITE } from '../config/site'
+import { SOLUTIONS } from '../config/solutions'
 import { DEMOS } from '../demos/registry'
 import { paths } from '../lib/router'
 import { EMAIL_ENQUIRY_URL } from '../lib/email'
@@ -12,7 +13,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-white/10 bg-ink-950">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-[1.3fr_1fr_1fr]">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_1fr]">
           <div>
             <Wordmark />
             <p className="mt-5 font-display text-sm font-semibold text-white">{SITE.tagline}</p>
@@ -35,6 +36,19 @@ export function SiteFooter() {
                   <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </li>
+            </ul>
+          </div>
+
+          <div>
+            <h2 className="font-display text-sm font-semibold text-white">Solutions</h2>
+            <ul className="mt-4 space-y-2.5">
+              {SOLUTIONS.map((s) => (
+                <li key={s.slug}>
+                  <a href={paths.solution(s.slug)} className={footerLink}>
+                    {s.title}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
