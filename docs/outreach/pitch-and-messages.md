@@ -50,7 +50,7 @@ Friends who hand out demo links get 10 percent of the agreed price for each busi
 
 These prices are starting numbers to test with real owners. They are not market facts. Change them when you learn more.
 
-- **First 5 founding clients:** $150 setup + $15 per month.
+- **First 5 founding clients:** $150 setup + $15 per month. The first month is free: the $15 a month starts in month two.
 - **Standard (later):** about $300 setup + $25 per month.
 - **Live in 2 to 3 weeks** after the menu and details are agreed.
 - **Payments are not included in the first offer.** Taking payments is a later add-on.
@@ -59,7 +59,7 @@ These prices are starting numbers to test with real owners. They are not market 
 ## Answers to common questions
 
 **"How much?"**
-"I am starting with 5 founding clients. Right now I am testing $150 to set up and $15 a month. I would rather you look at the sample first, then we see if it fits. Payments are not part of that first version."
+"I am starting with 5 founding clients. Right now I am testing $150 to set up and $15 a month, and the first month is free. I would rather you look at the sample first, then we see if it fits. Payments are not part of that first version."
 
 **"Is it real?"**
 "The sample is real software, but the business, items and customers in it are invented. For you I would set it up with your real menu and it would be live in 2 to 3 weeks. I can show you how it works on my phone now."

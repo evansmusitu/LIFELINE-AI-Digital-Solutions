@@ -79,7 +79,7 @@ export const MIN_DELIVERY_ORDER = 8
 export const TIMES_TODAY = ['As soon as possible (about 45 minutes)', 'Today, 12:00–13:00', 'Today, 14:00–15:00', 'Today, 16:00–17:00']
 export const TIMES_TOMORROW = ['Tomorrow, 08:00–09:00', 'Tomorrow, 10:00–11:00', 'Tomorrow, 14:00–15:00']
 
-export const PAYMENTS = ['Cash', 'Mobile money', 'Card', 'Bank transfer']
+export const PAYMENTS = ['Cash (USD or ZiG)', 'EcoCash', 'InnBucks', 'Card', 'Bank transfer (USD or ZiG)']
 
 export const EMPTY_DETAILS: Details = {
   name: '',
@@ -87,7 +87,7 @@ export const EMPTY_DETAILS: Details = {
   area: 'Avondale',
   address: '',
   time: TIMES_TODAY[0],
-  payment: 'Mobile money',
+  payment: 'EcoCash',
   notes: '',
 }
 
@@ -126,7 +126,7 @@ function order(
     area: where.method === 'delivery' ? where.area : undefined,
     address: where.method === 'delivery' ? `${where.area}, Harare` : undefined,
     time: extra.time ?? TIMES_TODAY[0],
-    payment: extra.payment ?? 'Mobile money',
+    payment: extra.payment ?? 'EcoCash',
     notes: extra.notes,
     lines: orderLines,
     subtotal,
@@ -145,7 +145,7 @@ export function createInitialState(): OrderingState {
     details: EMPTY_DETAILS,
     nextRef: 2417,
     orders: [
-      order(products, 2416, todayAt(10, 36), 'Tendai K.', { method: 'collection' }, [['cinnamon', 3], ['flat-white', 1, 'full']], 'New', { time: 'Today, 12:00–13:00', payment: 'Cash' }),
+      order(products, 2416, todayAt(10, 36), 'Tendai K.', { method: 'collection' }, [['cinnamon', 3], ['flat-white', 1, 'full']], 'New', { time: 'Today, 12:00–13:00', payment: 'Cash (USD or ZiG)' }),
       order(products, 2415, todayAt(10, 21), 'Kudzai M.', { method: 'delivery', area: 'Highlands' }, [['sourdough', 1], ['rolls', 1], ['orange-juice', 2]], 'Preparing'),
       order(products, 2414, todayAt(9, 58), 'Chipo N.', { method: 'delivery', area: 'Avondale' }, [['chicken-sandwich', 2], ['cappuccino', 2, 'oat']], 'Out for delivery', { payment: 'Card' }),
       order(products, 2413, todayAt(9, 30), 'Nyasha D.', { method: 'collection' }, [['fudge-cake', 1, '8in']], 'Confirmed', {
@@ -153,11 +153,11 @@ export function createInitialState(): OrderingState {
         notes: 'Please write “Happy 7th birthday, Tino” on top.',
       }),
       order(products, 2412, todayAt(8, 55), 'Farai C.', { method: 'delivery', area: 'Borrowdale' }, [['beef-pie', 6], ['rooibos', 6]], 'Completed', {
-        payment: 'Bank transfer',
+        payment: 'Bank transfer (USD or ZiG)',
         notes: 'Office lunch. Please call reception on arrival.',
       }),
       order(products, 2411, todayAt(8, 20), 'Grace T.', { method: 'delivery', area: 'Mount Pleasant' }, [['brownies', 1], ['lemon-loaf', 1]], 'Completed'),
-      order(products, 2410, todayAt(7, 46), 'Tapiwa S.', { method: 'collection' }, [['rye', 1], ['flat-white', 2, 'oat']], 'Completed', { payment: 'Cash' }),
+      order(products, 2410, todayAt(7, 46), 'Tapiwa S.', { method: 'collection' }, [['rye', 1], ['flat-white', 2, 'oat']], 'Completed', { payment: 'InnBucks' }),
       order(products, 2409, todayAt(7, 12), 'Rudo M.', { method: 'delivery', area: 'Belgravia' }, [['sourdough', 2], ['croissant', 4]], 'Completed'),
     ],
   }

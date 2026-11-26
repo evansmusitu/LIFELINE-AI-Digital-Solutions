@@ -1,4 +1,4 @@
-import { money } from '../../lib/format'
+import { money, zigWhole } from '../../lib/format'
 import { BUSINESS, STATUS_FLOW } from './data'
 import type { Order, OrderStatus } from './types'
 
@@ -8,7 +8,7 @@ export function orderMessage(order: Order, business: string = BUSINESS): string 
   for (const line of order.lines) out.push(`• ${line.qty} × ${line.name}: ${money(line.qty * line.unitPrice)}`)
   out.push('', `Subtotal: ${money(order.subtotal)}`)
   out.push(order.method === 'delivery' ? `Delivery to ${order.area}: ${money(order.deliveryFee)}` : 'Collection from the Avondale shop: free')
-  out.push(`*Total: ${money(order.total)}*`, '')
+  out.push(`*Total: ${money(order.total)}* (${zigWhole(order.total)} at the sample rate)`, '')
   out.push(`Name: ${order.customer}`)
   if (order.method === 'delivery') out.push(`Address: ${order.address}`)
   out.push(`${order.method === 'delivery' ? 'Delivery' : 'Collection'} time: ${order.time}`)

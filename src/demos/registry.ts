@@ -3,6 +3,7 @@ import {
   Bot,
   Cable,
   FileSearch,
+  GraduationCap,
   Headset,
   Leaf,
   PanelsLeftRight,
@@ -35,6 +36,12 @@ import type { Service } from '../config/site'
  */
 export const LIST_WELLNESS_DEMO = true
 
+/**
+ * THE SWITCH for the school admissions demo (/demos/school-admissions). Works the same way as
+ * LIST_WELLNESS_DEMO: false keeps it unlisted (link only, noindex), true lists it.
+ */
+export const LIST_SCHOOL_DEMO = false
+
 export const INDUSTRIES = [
   'Retail & e-commerce',
   'Food & hospitality',
@@ -43,6 +50,7 @@ export const INDUSTRIES = [
   'Property & construction',
   'Beauty & wellness',
   'Events & tourism',
+  'Education',
 ] as const
 
 export type Industry = (typeof INDUSTRIES)[number]
@@ -984,6 +992,64 @@ export const ALL_DEMOS: DemoMeta[] = [
       ],
     },
     ...demoModule(() => import('./wellness-consulting')),
+  },
+  {
+    slug: 'school-admissions',
+    number: 0,
+    listed: LIST_SCHOOL_DEMO,
+    title: 'School admissions and parent desk',
+    category: 'Services & local markets',
+    icon: GraduationCap,
+    summary:
+      'A school’s own AI admissions assistant: answers parents in English or Shona, books tours, takes applications and sends urgent notices.',
+    intro:
+      'See how an independent school in Harare answers parents day and night: fees in USD and ZiG, term dates, mid-year transfers and boarding, tours and online applications, WhatsApp, and the admissions office’s view.',
+    highlights: [
+      'Answers parents in English or Shona, day and night',
+      'Tours, applications and document checklists',
+      'Urgent notices to every parent at once',
+    ],
+    tryThis: [
+      'Ask the assistant about Form 1 fees, or ask in Shona',
+      'Apply for a place and see what is still needed',
+      'Send an urgent notice from the admissions office',
+    ],
+    industries: ['Education'],
+    business: { name: 'Mukwa Ridge Academy', location: 'Harare, Zimbabwe' },
+    build: {
+      timeline: '3 to 5 weeks',
+      intro:
+        'An assistant that knows your fees, dates and admissions rules and stays within them, tour booking and online applications, urgent notices, and the same assistant on your WhatsApp number. It works next to your current school system or spreadsheet.',
+      steps: [
+        {
+          when: 'Week 1',
+          title: 'Your fees, dates and rules',
+          detail: 'We agree your fees and approved levies, term dates, admissions steps, documents and what the assistant may and may not say.',
+        },
+        {
+          when: 'Weeks 1 to 2',
+          title: 'Website, tours and applications',
+          detail: 'Your admissions pages go up on a preview link, with tour booking, the application form and the document checklist.',
+        },
+        {
+          when: 'Weeks 2 to 3',
+          title: 'The assistant',
+          detail: 'It learns your school and answers parents in English and Shona, hands over to the office and never asks for a child’s details.',
+        },
+        {
+          when: 'Weeks 3 to 5',
+          title: 'WhatsApp and go-live',
+          detail: 'We connect your WhatsApp Business number, test the messages and urgent notices with your office, and go live.',
+        },
+      ],
+      services: [
+        'Website design, development and redesign',
+        'AI chatbots and virtual assistants',
+        'Customer support and lead generation',
+        'Business process and workflow automation',
+      ],
+    },
+    ...demoModule(() => import('./school-admissions')),
   },
 ]
 

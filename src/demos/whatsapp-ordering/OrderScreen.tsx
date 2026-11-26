@@ -2,7 +2,7 @@ import { ArrowLeft, Bike, CircleCheck, ClipboardCopy, Info, Pencil, Store, Trash
 import { useId, useState, type FormEvent } from 'react'
 import { WhatsAppIcon } from '../../components/WhatsAppIcon'
 import { useBusinessName } from '../../lib/business-name'
-import { money } from '../../lib/format'
+import { money, zigWhole } from '../../lib/format'
 import { whatsappUrl } from '../../lib/whatsapp'
 import { AppButton, Field, Notice, Panel, QtyStepper, Segmented, SelectInput, TextArea, TextInput } from '../ui'
 import { AREAS, BUSINESS, MIN_DELIVERY_ORDER, NEXT_DAY_PRODUCTS, PAYMENTS, TIMES_TODAY, TIMES_TOMORROW } from './data'
@@ -222,6 +222,10 @@ function DetailsForm({ products, cart, details, onSetQty, onDetails, onPreview, 
             <div className="flex justify-between text-base font-bold text-slate-900">
               <dt>Total</dt>
               <dd className="tabular-nums">{money(subtotal + fee)}</dd>
+            </div>
+            <div className="flex justify-between text-xs text-slate-600">
+              <dt>In ZiG, at a sample rate</dt>
+              <dd className="tabular-nums">{zigWhole(subtotal + fee)}</dd>
             </div>
           </dl>
           {short && (
