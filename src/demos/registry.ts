@@ -6,6 +6,7 @@ import {
   FileSearch,
   GraduationCap,
   Headset,
+  Landmark,
   Leaf,
   PanelsLeftRight,
   ScanBarcode,
@@ -45,6 +46,9 @@ export const LIST_SCHOOL_DEMO = false
 
 /** THE SWITCH for the teacher coursework demo (/demos/teacher-coursework). Same as the others. */
 export const LIST_TEACHER_DEMO = false
+
+/** THE SWITCH for the school fees and accountability demo (/demos/school-fees). Same as the others. */
+export const LIST_FEES_DEMO = false
 
 export const INDUSTRIES = [
   'Retail & e-commerce',
@@ -1112,6 +1116,64 @@ export const ALL_DEMOS: DemoMeta[] = [
       ],
     },
     ...demoModule(() => import('./teacher-coursework')),
+  },
+  {
+    slug: 'school-fees',
+    number: 0,
+    listed: LIST_FEES_DEMO,
+    title: 'School fees and accountability',
+    category: 'Operations & finance',
+    icon: Landmark,
+    summary:
+      'Fees in USD and ZiG at the invoice rate, payment links for family abroad, plans instead of sending children home, approved levies with an audit trail, and a salary forecast.',
+    intro:
+      'See how a Harare school’s bursar and School Development Committee keep fees fair and accountable: the family statement, the never-exclude steps, the levy register and ledger with receipts and two approvals, and whether next month’s salaries are covered.',
+    highlights: [
+      'USD and ZiG, with the rate fixed on the invoice',
+      'Reminders, a private meeting, then a plan: never sent home',
+      'No levy billed without the Ministry’s approval',
+    ],
+    tryThis: [
+      'Send a payment link to a relative abroad',
+      'Take an account in arrears through to an agreed plan',
+      'Record a levy approval, then check the salary forecast',
+    ],
+    industries: ['Education'],
+    business: { name: 'Mukwa Ridge Academy', location: 'Harare, Zimbabwe' },
+    build: {
+      timeline: '4 to 6 weeks',
+      intro:
+        'Family statements on WhatsApp in USD and ZiG, payment links, plans, the levy register and ledger with an audit trail, the SDC report and a cash forecast. It works next to your current fees or accounting system.',
+      steps: [
+        {
+          when: 'Week 1',
+          title: 'Your fees, levies and approvals',
+          detail: 'We load your fee list, levies with their approval references, bursaries and how you take payments.',
+        },
+        {
+          when: 'Weeks 1 to 3',
+          title: 'Statements and payments',
+          detail: 'Families get statements on WhatsApp with payment options, including a link for relatives abroad.',
+        },
+        {
+          when: 'Weeks 3 to 5',
+          title: 'Bursar and SDC views',
+          detail: 'The never-exclude steps, the levy ledger with receipts and two approvals, the audit trail and the one-page SDC report.',
+        },
+        {
+          when: 'Weeks 5 to 6',
+          title: 'Forecast and go-live',
+          detail: 'We set the cash forecast from your past collections, train the bursary team and go live.',
+        },
+      ],
+      services: [
+        'Web applications and custom software',
+        'Business process and workflow automation',
+        'Dashboards and data analytics',
+        'API integrations and AI-powered systems',
+      ],
+    },
+    ...demoModule(() => import('./school-fees')),
   },
 ]
 
