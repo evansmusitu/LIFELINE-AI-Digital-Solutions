@@ -1,5 +1,6 @@
 import {
   Activity,
+  BookMarked,
   Bot,
   Cable,
   FileSearch,
@@ -41,6 +42,9 @@ export const LIST_WELLNESS_DEMO = true
  * LIST_WELLNESS_DEMO: false keeps it unlisted (link only, noindex), true lists it.
  */
 export const LIST_SCHOOL_DEMO = false
+
+/** THE SWITCH for the teacher coursework demo (/demos/teacher-coursework). Same as the others. */
+export const LIST_TEACHER_DEMO = false
 
 export const INDUSTRIES = [
   'Retail & e-commerce',
@@ -1050,6 +1054,64 @@ export const ALL_DEMOS: DemoMeta[] = [
       ],
     },
     ...demoModule(() => import('./school-admissions')),
+  },
+  {
+    slug: 'teacher-coursework',
+    number: 0,
+    listed: LIST_TEACHER_DEMO,
+    title: 'Teacher time-saver: coursework and reports',
+    category: 'AI & automation',
+    icon: BookMarked,
+    summary:
+      'Coursework deadlines, a mark book that finds weak topics, a project authenticity log and AI report comments the teacher approves.',
+    intro:
+      'See how a Geography teacher in Harare keeps ZIMSEC coursework on time: deadlines and the upload export, a mark book with a free revision plan, a dated project log, AI-drafted report comments and attendance check-ins.',
+    highlights: [
+      'Board deadlines and a ready-to-upload export',
+      'AI report comments, approved by the teacher',
+      'A dated log of every project draft',
+    ],
+    tryThis: [
+      'Draft a report comment with AI, then edit and approve it',
+      'Change a mark and watch the weak topics update',
+      'Switch the deadlines to a Kenyan school',
+    ],
+    industries: ['Education'],
+    business: { name: 'Mukwa Ridge Academy', location: 'Harare, Zimbabwe' },
+    build: {
+      timeline: '3 to 5 weeks',
+      intro:
+        'Your classes, coursework tasks and board deadlines, a mark book, the project log, report comments in your school’s style and attendance check-ins. It works next to your current school system.',
+      steps: [
+        {
+          when: 'Week 1',
+          title: 'Your classes and deadlines',
+          detail: 'We load your classes and subjects, the board’s coursework tasks and deadlines, and your report comment style.',
+        },
+        {
+          when: 'Weeks 1 to 3',
+          title: 'Mark book, project log and export',
+          detail: 'Teachers get the mark book and project log on a preview link, and we match the export to the board’s template.',
+        },
+        {
+          when: 'Weeks 2 to 4',
+          title: 'Report comments',
+          detail: 'The assistant learns your school’s tone. It only sees marks, never names, and every comment needs a teacher’s approval.',
+        },
+        {
+          when: 'Weeks 4 to 5',
+          title: 'Training and go-live',
+          detail: 'A short session with your teachers on their phones, then WhatsApp deadline reminders are switched on.',
+        },
+      ],
+      services: [
+        'Web applications and custom software',
+        'AI chatbots and virtual assistants',
+        'Business process and workflow automation',
+        'Dashboards and data analytics',
+      ],
+    },
+    ...demoModule(() => import('./teacher-coursework')),
   },
 ]
 
