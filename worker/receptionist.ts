@@ -1,7 +1,7 @@
 import { LIMITS, type ChatTurn, type NoReply, type ReceptionistRequest } from '../src/receptionist/protocol'
 import { BASE_HEADERS, isRecord, json, loadKnowledge, pageName, readBody, rejectRequest, requestNetwork, visitorId } from './http'
 import type { ChatLimiter } from './limiter'
-import { personaFor, schoolPrompt, systemPrompt, wellnessPrompt } from './prompt'
+import { personaFor, schoolPrompt, systemPrompt, teacherPrompt, wellnessPrompt } from './prompt'
 import type { Count } from './stats'
 import { replyStream } from './stream'
 
@@ -148,13 +148,15 @@ export async function handleReceptionist(
   }
   if (chat.first) count('chat_started')
 
-  // Tari everywhere, except the wellness and school demos' own chats (worker/prompt.ts). Same limits and daily cap for all.
+  // Tari everywhere, except the wellness, school and teacher demos' own assistants (worker/prompt.ts). Same limits and daily cap for all.
   const persona = personaFor(chat.page)
   let system: string
   if (persona === 'wellness') {
     system = wellnessPrompt()
   } else if (persona === 'school') {
     system = schoolPrompt()
+  } else if (persona === 'teacher') {
+    system = teacherPrompt()
   } else {
     const knowledge = await loadKnowledge(env, url.origin)
     const page = knowledge.demos.some((d) => d.slug === chat.page) ? chat.page : 'home'

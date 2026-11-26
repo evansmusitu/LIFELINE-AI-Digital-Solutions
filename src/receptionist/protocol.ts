@@ -17,8 +17,11 @@ export const WELLNESS_PAGE = 'wellness-consulting'
 /** The school admissions demo. Its own website chat is answered as that sample school's assistant. */
 export const SCHOOL_PAGE = 'school-admissions'
 
+/** The teacher coursework demo. Its report-comment drafts are written by its own assistant, not Tari. */
+export const TEACHER_PAGE = 'teacher-coursework'
+
 /** Demos with their own assistant. Tari never sends these pages. */
-export const OWN_ASSISTANT_PAGES: readonly string[] = [WELLNESS_PAGE, SCHOOL_PAGE]
+export const OWN_ASSISTANT_PAGES: readonly string[] = [WELLNESS_PAGE, SCHOOL_PAGE, TEACHER_PAGE]
 
 const hasOwnAssistant = (slug: string | undefined) => !!slug && OWN_ASSISTANT_PAGES.includes(slug)
 
