@@ -298,7 +298,7 @@ describe('the school persona', () => {
     expect(p.split(/\s+/).length).toBeLessThan(1800)
   })
 
-  it('leaves Tari’s instructions without the sample school while it is unlisted', () => {
+  it('keeps the sample school out of Tari’s instructions while unlisted, and gives Tari the demo once listed', () => {
     const p = systemPrompt(toKnowledge(DEMOS), 'home')
     if (!LIST_SCHOOL_DEMO) {
       expect(p).not.toContain(SCHOOL.name)
@@ -349,7 +349,7 @@ describe('the school persona', () => {
 })
 
 describe('listing', () => {
-  it('follows the switch: unlisted for now, with a page but out of the lists and the receptionist’s knowledge', () => {
+  it('follows the switch for the gallery and the receptionist’s knowledge', () => {
     expect(findDemo('school-admissions')?.business.name).toBe(SCHOOL.name)
     expect(ALL_DEMOS.some((d) => d.slug === 'school-admissions')).toBe(true)
     expect(DEMOS.some((d) => d.slug === 'school-admissions')).toBe(LIST_SCHOOL_DEMO)

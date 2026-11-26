@@ -465,7 +465,8 @@ function promptChecks() {
   check('prompt: has founder', p.includes('Evans Musitu'))
   check('prompt: names no providers', !/cloudflare|gemma|google|workers/i.test(p) && p.includes('Don’t name any outside companies'))
   const words = p.split(/\s+/).length
-  check('prompt: compact (under 1,500 words)', words < 1500, words)
+  // Raised from 1,500 when the three school demos were listed (19 demos).
+  check('prompt: compact (under 1,600 words)', words < 1600, words)
 }
 
 function fallbackChecks() {

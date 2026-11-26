@@ -42,13 +42,13 @@ export const LIST_WELLNESS_DEMO = true
  * THE SWITCH for the school admissions demo (/demos/school-admissions). Works the same way as
  * LIST_WELLNESS_DEMO: false keeps it unlisted (link only, noindex), true lists it.
  */
-export const LIST_SCHOOL_DEMO = false
+export const LIST_SCHOOL_DEMO = true
 
 /** THE SWITCH for the teacher coursework demo (/demos/teacher-coursework). Same as the others. */
-export const LIST_TEACHER_DEMO = false
+export const LIST_TEACHER_DEMO = true
 
 /** THE SWITCH for the school fees and accountability demo (/demos/school-fees). Same as the others. */
-export const LIST_FEES_DEMO = false
+export const LIST_FEES_DEMO = true
 
 export const INDUSTRIES = [
   'Retail & e-commerce',
@@ -1009,7 +1009,7 @@ export const ALL_DEMOS: DemoMeta[] = [
     category: 'Services & local markets',
     icon: GraduationCap,
     summary:
-      'A school’s own AI admissions assistant: answers parents in English or Shona, books tours, takes applications and sends urgent notices.',
+      'A school’s AI admissions assistant for parents, in English or Shona, with tours and applications.',
     intro:
       'See how an independent school in Harare answers parents day and night: fees in USD and ZiG, term dates, mid-year transfers and boarding, tours and online applications, WhatsApp, and the admissions office’s view.',
     highlights: [
@@ -1067,7 +1067,7 @@ export const ALL_DEMOS: DemoMeta[] = [
     category: 'AI & automation',
     icon: BookMarked,
     summary:
-      'Coursework deadlines, a mark book that finds weak topics, a project authenticity log and AI report comments the teacher approves.',
+      'Coursework deadlines, a mark book, a project log and AI report comments teachers approve.',
     intro:
       'See how a Geography teacher in Harare keeps ZIMSEC coursework on time: deadlines and the upload export, a mark book with a free revision plan, a dated project log, AI-drafted report comments and attendance check-ins.',
     highlights: [
@@ -1125,7 +1125,7 @@ export const ALL_DEMOS: DemoMeta[] = [
     category: 'Operations & finance',
     icon: Landmark,
     summary:
-      'Fees in USD and ZiG at the invoice rate, payment links for family abroad, plans instead of sending children home, approved levies with an audit trail, and a salary forecast.',
+      'School fees in USD and ZiG, payment plans, approved levies with an audit trail, and a salary forecast.',
     intro:
       'See how a Harare school’s bursar and School Development Committee keep fees fair and accountable: the family statement, the never-exclude steps, the levy register and ledger with receipts and two approvals, and whether next month’s salaries are covered.',
     highlights: [
