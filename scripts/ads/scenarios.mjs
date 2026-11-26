@@ -208,9 +208,9 @@ const montage = {
   id: 'try-the-demos',
   file: '4-try-the-demos-free',
   tag: 'Sample business demos',
-  cover: { headline: '16 live demos. **Try them free**', at: 4, focus: 30 },
+  cover: { headline: '19 live demos. **Try them free**', at: 4, focus: 30 },
   lines: {
-    hook: { kind: 'hook', cap: '**16 live demos.** Try them free', say: 'Sixteen live demos. Try them free.' },
+    hook: { kind: 'hook', cap: '**19 live demos.** Try them free', say: 'Nineteen live demos. Try them free.' },
     ...Object.fromEntries(MONTAGE.map((m) => [m.slug, { cap: `**${m.short}**`, say: `${m.short}.` }])),
     last: { cap: 'No sign-up. **Just tap and try**', say: 'No sign-up. Just tap and try.' },
   },
@@ -300,9 +300,9 @@ const sn = {
   },
   'try-the-demos': {
     tag: 'Madhemo emabhizimisi emuenzaniso',
-    headline: '**Madhemo 16.** Yedza mahara',
+    headline: '**Madhemo 19.** Yedza mahara',
     caps: {
-      hook: '**Madhemo 16.** Yedzai mahara',
+      hook: '**Madhemo 19.** Yedzai mahara',
       'restaurant-delivery': '**Restaurant delivery**',
       'crm-pipeline': '**Pipeline** yekutengesa',
       'clinic-pharmacy': '**Kiriniki** ne pharmacy',

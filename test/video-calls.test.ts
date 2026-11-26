@@ -152,7 +152,8 @@ function promptChecks() {
   check('video prompt: every demo ID listed', (knowledgeJson as { demos: { slug: string }[] }).demos.every((d) => p.includes(`- ${d.slug} |`)))
   check('video prompt: number spoken in groups', p.includes('plus two six three, seven eight one, five seven two, zero zero eight'), p.match(/message (.*) on WhatsApp/)?.[1])
   check('video prompt: no providers named', !/cloudflare|napster|gemma|openai|azure/i.test(p))
-  check('video prompt: compact', p.length < 9000, p.length)
+  // Raised from 9,000 when the three school demos were listed (19 demos).
+  check('video prompt: compact', p.length < 9800, p.length)
   check('video opening: demo page', videoOpening(knowledge, 'salon-spa-booking', 180).startsWith('The visitor is looking at the Salon and spa booking demo.'))
   check('video opening: says 3 minutes for 175 s', videoOpening(knowledge, 'home', 175).includes('up to 3 minutes'))
   check('video opening: home', videoOpening(knowledge, 'nope', 175).startsWith('The visitor is on the home page.'))
