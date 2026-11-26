@@ -351,6 +351,7 @@ Batches 1 to 3 of 5 (numbers refer to the brief's list of 25), plus the wellness
 | – | Wellness practice: AI assistant and booking | Sable Leaf Wellness, Harare and Johannesburg | Website with a live AI assistant and lead capture, booking (in person at either office or online), a simulated WhatsApp conversation, owner view |
 | – | School admissions and parent desk (unlisted) | Mukwa Ridge Academy, Harare | Website with a live AI admissions assistant (English and Shona), fees in USD and ZiG with approved levies, tour booking, online applications with a document checklist and parental consent, a simulated WhatsApp conversation, admissions office with places, waiting list and urgent notices |
 | – | Teacher time-saver: coursework and reports (unlisted) | Mukwa Ridge Academy, Harare | Coursework deadlines (ZIMSEC, and a Kenyan KNEC example) with an upload export, a mark book with weak topics and a free revision plan, a dated project authenticity log, AI-drafted report comments the teacher approves, attendance check-ins and private counsellor referrals |
+| – | School fees and accountability (unlisted) | Mukwa Ridge Academy, Harare | Family statement in USD and ZiG at the rate fixed on the invoice, payment and pay-from-abroad links, monthly plans, the bursar's never-exclude steps, a levy register that can't bill without the Ministry's approval, levy ledger with receipts and two approvals, audit trail, fiscal-receipt flags, cash forecast and SDC report |
 
 The school admissions demo is unlisted (`LIST_SCHOOL_DEMO = false` in `src/demos/registry.ts`): open it at
 `/demos/school-admissions`. Its own chat is answered as the school's assistant, Rudo (`schoolPrompt` in
@@ -364,6 +365,10 @@ The teacher demo is unlisted (`LIST_TEACHER_DEMO = false`): open it at `/demos/t
 drafts come from `teacherPrompt` in `worker/prompt.ts`, through the same endpoint, limits and daily cap as Tari. Only the
 subject and marks by topic are sent (`commentFacts` in its `engine.ts`), never a name: the assistant writes `{name}` and
 the browser puts the first name in. Without an AI reply it writes a saved draft from the marks.
+
+The fees demo is unlisted (`LIST_FEES_DEMO = false`): open it at `/demos/school-fees`. It has no AI. It uses the
+admissions demo's fee list (`src/demos/school-admissions/business.ts`), so both demos quote the same fees and levies.
+Accounts in arrears only ever get a reminder, a private meeting and a plan; there is no way to mark a learner as sent home.
 
 The wellness demo's times are Harare and Johannesburg time (UTC+2) whatever the visitor's time zone. It asks only for a name, a phone
 number and an optional email, never health information. The WhatsApp screen is scripted and says so; nothing is sent.
