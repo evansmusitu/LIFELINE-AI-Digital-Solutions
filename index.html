@@ -16,6 +16,7 @@
       page gets its own copy of this file with that demo's title and summary.
     -->
     <!-- page-meta -->
+    <!-- page-jsonld -->
     <meta name="theme-color" content="#050B1F" />
     <!-- Link previews (WhatsApp, Facebook, LinkedIn, X). Crawlers need absolute URLs. -->
     <meta property="og:type" content="website" />
@@ -34,11 +35,11 @@
     <style>
       /* Paint the brand background before CSS and JavaScript arrive on slow connections. */
       html { background: #050b1f; color: #dce3f2; }
-      .boot { min-height: 100vh; display: grid; place-items: center; font: 500 15px/1.5 system-ui, sans-serif; color: #b9c5e0; }
     </style>
   </head>
   <body>
-    <div id="root"><div class="boot">Loading the LIFELINE Demo Studio…</div></div>
+    <!-- The build (vite.config.ts) puts the page's own content here, readable without JavaScript. The app replaces it when it starts. -->
+    <div id="root"><!-- page-body --></div>
     <noscript>
       <p style="padding: 24px; text-align: center">
         The Demo Studio needs JavaScript to run the interactive demos.

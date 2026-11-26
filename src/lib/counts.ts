@@ -1,6 +1,6 @@
 import { SITE } from '../config/site'
 import { parseBusinessName } from './business-name'
-import { byEvent, EVENT_PATH, refEvent, type PageEvent } from './count-events'
+import { byEvent, EVENT_PATH, refEvent, sourceEvent, type PageEvent } from './count-events'
 
 /*
  * Counts WhatsApp taps and demo shares as daily totals (src/lib/count-events.ts). Each count sends
@@ -86,4 +86,24 @@ export function countArrival(search: string = window.location.search): void {
     // Storage blocked: count once for this page load only.
   }
   events.forEach(countEvent)
+}
+
+const VISIT_FLAG = 'lifeline.visit'
+let visitDone = false
+
+/**
+ * Counts one visit per tab session, and the kind of site it came from (search, an AI assistant, social,
+ * another site, or none). The same sessionStorage rule as countArrival, under its own flag.
+ */
+export function countVisit(referrer: string = document.referrer, ownHost: string = window.location.hostname): void {
+  if (visitDone) return
+  visitDone = true
+  try {
+    if (window.sessionStorage.getItem(VISIT_FLAG)) return
+    window.sessionStorage.setItem(VISIT_FLAG, '1')
+  } catch {
+    // Storage blocked: count once for this page load only.
+  }
+  countEvent('visit')
+  countEvent(sourceEvent(referrer, ownHost))
 }

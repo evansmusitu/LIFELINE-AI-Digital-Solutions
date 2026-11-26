@@ -54,9 +54,19 @@ export const EVENT_LABELS: Record<CountEvent, string> = {
   by_team_c: 'Arrived from a link handed out by team-c',
   by_other: 'Arrived from a link handed out by anyone else',
   link_personalised: 'Personalised links opened',
+  visit: 'Visits (once per browser tab)',
+  from_search: 'Visits from a search engine',
+  from_ai: 'Visits from an AI assistant',
+  from_social: 'Visits from social media',
+  from_other_site: 'Visits from another website',
+  from_direct: 'Visits with no referring site (typed, WhatsApp, apps)',
 }
 
 const COLUMNS: { label: string; events: CountEvent[] }[] = [
+  { label: 'Visits', events: ['visit'] },
+  { label: 'From search', events: ['from_search'] },
+  { label: 'From AI assistants', events: ['from_ai'] },
+  { label: 'From social', events: ['from_social'] },
   { label: 'Chats started', events: ['chat_started'] },
   { label: 'AI replies', events: ['ai_reply'] },
   { label: 'Saved answers', events: ['saved_quota', 'saved_busy', 'saved_error'] },

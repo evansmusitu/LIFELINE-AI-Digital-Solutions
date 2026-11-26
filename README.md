@@ -402,6 +402,18 @@ Every demo page has the conversion features from the brief: a "Get a quote for t
 demo name filled in, a sticky call-to-action bar on phones, live outcome metrics, a "How we'd build this for you"
 section, the "Powered by LIFELINE AI CONCIERGE" frame and the "Sample data for demonstration" badge.
 
+### Search engines and AI assistants
+
+The build (`studioPages` in `vite.config.ts`, with `scripts/seo/prerender.ts`) writes each page's real content into
+its HTML, so search engines and AI assistants can read it without running JavaScript. That covers the home page, every
+listed demo and every solution page. The app replaces it as soon as it starts. Each page also gets structured data
+(JSON-LD: the business in Harare, breadcrumbs, services, and FAQs on solution pages). The build writes
+`sitemap.xml` with dates, and `llms.txt`, a plain summary of the site for AI assistants.
+
+Solution pages (`/solutions/<slug>`) come from `src/config/solutions.ts`, one per kind of problem a business searches
+for, each linking to its demos. `/stats` counts visits once per browser tab and the kind of site they came from (search,
+AI assistant, social, another site, or none). It never stores the address.
+
 ### Adding a demo
 
 1. Create `src/demos/<slug>/index.tsx` with a default-exported component. Wrap the screens in `DemoAppShell` and

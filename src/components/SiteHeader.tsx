@@ -17,6 +17,9 @@ export function SiteHeader() {
           <a href={paths.demos} className={navLink}>
             Demos
           </a>
+          <a href={paths.solutions} className={navLink}>
+            Solutions
+          </a>
           <a href={paths.about} className={navLink}>
             About
           </a>

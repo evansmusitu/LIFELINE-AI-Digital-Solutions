@@ -27,6 +27,12 @@ export const PAGE_EVENTS = [
   'by_team_c',
   'by_other',
   'link_personalised',
+  'visit',
+  'from_search',
+  'from_ai',
+  'from_social',
+  'from_other_site',
+  'from_direct',
 ] as const
 export type PageEvent = (typeof PAGE_EVENTS)[number]
 
@@ -73,4 +79,27 @@ export function byEvent(raw: string | null | undefined): PageEvent | null {
   const tag = raw.trim().toLowerCase()
   const known = (BY_TAGS as readonly string[]).includes(tag)
   return (known ? `by_${tag.replace('-', '_')}` : 'by_other') as PageEvent
+}
+
+/*
+ * Where a visit came from, by the kind of site in the browser's referrer. Only the kind is sent, never
+ * the address. WhatsApp and many apps send no referrer, so their visits count as direct.
+ */
+const SEARCH = /(^|\.)(google\.[a-z.]+|bing\.com|duckduckgo\.com|search\.yahoo\.com|yandex\.[a-z]+|ecosia\.org|search\.brave\.com)$/
+const AI = /(^|\.)(chatgpt\.com|openai\.com|perplexity\.ai|gemini\.google\.com|copilot\.microsoft\.com|claude\.ai|meta\.ai)$/
+const SOCIAL = /(^|\.)(facebook\.com|fb\.com|instagram\.com|tiktok\.com|t\.co|x\.com|twitter\.com|linkedin\.com|lnkd\.in|youtube\.com|whatsapp\.com|wa\.me|threads\.net|pinterest\.com)$/
+
+export function sourceEvent(referrer: string, ownHost: string): PageEvent {
+  let host = ''
+  try {
+    host = referrer ? new URL(referrer).hostname.toLowerCase() : ''
+  } catch {
+    host = ''
+  }
+  if (!host || host === ownHost) return 'from_direct'
+  // AI assistants first: gemini.google.com is also a Google address.
+  if (AI.test(host)) return 'from_ai'
+  if (SEARCH.test(host)) return 'from_search'
+  if (SOCIAL.test(host)) return 'from_social'
+  return 'from_other_site'
 }

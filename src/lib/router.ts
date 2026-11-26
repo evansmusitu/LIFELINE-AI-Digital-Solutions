@@ -5,18 +5,20 @@ import { useSyncExternalStore } from 'react'
  *   /                  studio home
  *   /#demos, /#about, /#contact  home page sections
  *   /demos/<slug>      a demo
+ *   /solutions/<slug>  a solution page (src/config/solutions.ts)
  * The build writes one HTML file per demo (see vite.config.ts), so each demo link has its
  * own title and description in WhatsApp link previews and search results. Cloudflare
  * serves dist/demos/<slug>.html at /demos/<slug>, and unknown paths fall back to the studio.
  */
 
-export type HomeSection = 'demos' | 'about' | 'contact'
+export type HomeSection = 'demos' | 'solutions' | 'about' | 'contact'
 
-const SECTIONS: readonly HomeSection[] = ['demos', 'about', 'contact']
+const SECTIONS: readonly HomeSection[] = ['demos', 'solutions', 'about', 'contact']
 
 export type Route =
   | { name: 'home'; section?: HomeSection }
   | { name: 'demo'; slug: string }
+  | { name: 'solution'; slug: string }
   | { name: 'not-found' }
 
 export interface RouterLocation {
@@ -31,9 +33,11 @@ export interface RouterLocation {
 export const paths = {
   home: '/',
   demos: '/#demos',
+  solutions: '/#solutions',
   about: '/#about',
   contact: '/#contact',
   demo: (slug: string) => `/demos/${slug}`,
+  solution: (slug: string) => `/solutions/${slug}`,
 }
 
 const listeners = new Set<() => void>()
@@ -73,6 +77,9 @@ export function parseRoute({ path, hash }: Pick<RouterLocation, 'path' | 'hash'>
   if (clean === '/demos') return { name: 'home', section: 'demos' }
   const match = clean.match(/^\/demos\/([a-z0-9-]+)$/)
   if (match) return { name: 'demo', slug: match[1] }
+  if (clean === '/solutions') return { name: 'home', section: 'solutions' }
+  const solution = clean.match(/^\/solutions\/([a-z0-9-]+)$/)
+  if (solution) return { name: 'solution', slug: solution[1] }
   return { name: 'not-found' }
 }
 

@@ -5,12 +5,13 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { captureBusinessName } from './lib/business-name'
-import { countArrival, startCounting } from './lib/counts'
+import { countArrival, countVisit, startCounting } from './lib/counts'
 import { startRouter } from './lib/router'
 
 startRouter()
 startCounting()
 countArrival()
+countVisit()
 // After the arrival is counted (it reads ?for=): the name goes into this tab's storage and out of the address.
 captureBusinessName()
 

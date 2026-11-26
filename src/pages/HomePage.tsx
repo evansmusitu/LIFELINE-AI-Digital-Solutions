@@ -5,6 +5,7 @@ import { MobileCtaBar } from '../components/MobileCtaBar'
 import { WhatsAppIcon } from '../components/WhatsAppIcon'
 import { ABOUT, PRINCIPLES, PROCESS_STEPS } from '../config/about'
 import { SERVICES, SITE } from '../config/site'
+import { SOLUTIONS } from '../config/solutions'
 import { DEMOS, INDUSTRIES, type DemoMeta, type Industry } from '../demos/registry'
 import { useBusinessName } from '../lib/business-name'
 import { cn } from '../lib/cn'
@@ -19,6 +20,7 @@ export function HomePage() {
     <>
       <Hero />
       <Gallery />
+      <Solutions />
       <About />
       <Contact />
       <ReceptionistLauncher />
@@ -335,6 +337,35 @@ function DemoCard({ demo }: { demo: DemoMeta }) {
         />
       </div>
     </li>
+  )
+}
+
+/* Solutions: one page per kind of problem, linking to the demos that show it. */
+
+function Solutions() {
+  return (
+    <section id="solutions" aria-labelledby="solutions-title" className="scroll-mt-16 border-t border-white/5 bg-ink-950">
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <p className="text-sm font-semibold tracking-[0.18em] text-brand-cyan uppercase">Solutions</p>
+        <h2 id="solutions-title" tabIndex={-1} className="heading-glow mt-2 font-display text-3xl font-bold text-white outline-none sm:text-4xl">
+          What we build, by problem
+        </h2>
+        <ul className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {SOLUTIONS.map((s) => (
+            <li key={s.slug}>
+              <a href={paths.solution(s.slug)} className="card-glow flex h-full flex-col rounded-2xl p-5 transition hover:shadow-[0_0_40px_-12px_rgb(0_212_255/0.75)]">
+                <span className="font-display text-lg font-bold text-white">{s.title}</span>
+                <span className="mt-2 text-sm text-mist-300">{s.audience}</span>
+                <span className="mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-semibold text-brand-cyan">
+                  Read more
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   )
 }
 
