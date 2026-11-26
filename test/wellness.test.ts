@@ -45,7 +45,7 @@ import {
 import type { Booking } from '../src/demos/wellness-consulting/types'
 import { assistantRequest, greetingMessage } from '../src/demos/wellness-consulting/useAssistantChat'
 import { addScriptBooking, planScript, replanBeforeBooking, scriptLines } from '../src/demos/wellness-consulting/whatsapp-script'
-import { receptionistPage, toKnowledge, WELLNESS_PAGE } from '../src/receptionist/protocol'
+import { nextReceptionistPage, receptionistPage, toKnowledge, WELLNESS_PAGE } from '../src/receptionist/protocol'
 import type { ChatLimiter } from '../worker/limiter'
 import { personaFor, systemPrompt, wellnessPrompt } from '../worker/prompt'
 import { handleReceptionist, parseRequest } from '../worker/receptionist'
@@ -599,6 +599,12 @@ describe('the wellness persona', () => {
     expect(receptionistPage('wellness-consulting')).toBe('home')
     expect(receptionistPage('salon-spa-booking')).toBe('salon-spa-booking')
     expect(receptionistPage(undefined)).toBe('home')
+    // Moving onto the demo leaves Tari where it was, so an open chat doesn't say "back on the home page".
+    expect(nextReceptionistPage('salon-spa-booking', 'wellness-consulting')).toBe('salon-spa-booking')
+    expect(nextReceptionistPage('home', 'wellness-consulting')).toBe('home')
+    expect(nextReceptionistPage('salon-spa-booking', 'inventory-pos')).toBe('inventory-pos')
+    expect(nextReceptionistPage('salon-spa-booking', undefined)).toBe('home')
+    expect(nextReceptionistPage('salon-spa-booking', 'wellness-consulting')).not.toBe(WELLNESS_PAGE)
     expect(parseRequest(JSON.stringify({ messages: [{ role: 'user', content: 'Hi' }], page: '../wellness-consulting' }))?.page).toBe('home')
   })
 

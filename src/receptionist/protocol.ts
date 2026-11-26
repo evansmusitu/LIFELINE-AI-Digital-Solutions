@@ -22,6 +22,14 @@ export function receptionistPage(slug: string | undefined): string {
   return slug && slug !== WELLNESS_PAGE ? slug : 'home'
 }
 
+/**
+ * Tari's page after moving to `slug`. A demo with its own assistant leaves Tari where it was, so an open
+ * chat doesn't say "You're back on the home page" there. Opened straight on that demo, Tari starts on "home".
+ */
+export function nextReceptionistPage(previous: string, slug: string | undefined): string {
+  return slug === WELLNESS_PAGE ? previous : receptionistPage(slug)
+}
+
 export const LIMITS = {
   /** Characters in one visitor message. */
   visitorChars: 500,

@@ -33,7 +33,7 @@ import type { Service } from '../config/site'
  * search engines not to index it (noindex).
  * true: listed like every other demo. Nothing else needs changing.
  */
-export const LIST_WELLNESS_DEMO = false
+export const LIST_WELLNESS_DEMO = true
 
 export const INDUSTRIES = [
   'Retail & e-commerce',
